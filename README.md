@@ -1,66 +1,97 @@
-# SR20 Trainer
+# StudyBuddy — SR20 Trainer
 
-A persistent, local study app for the Cirrus SR20 reference numbers and procedures.
-Supports multiple users and multiple sets of training material.
+Spaced-repetition study app, live at **https://studybuddy.foo**. Currently one
+deck (Cirrus SR20 reference numbers and procedures, 36 cards); built to grow
+into a subject-agnostic study app where each deck is a module.
 
-## What it does
+## How it works
 
-- **Multiple users.** Pick who's studying on the "Who's studying?" screen, or
-  type a name to add someone — that's it. Each user has fully independent
-  boxes, sessions, and stats. The browser remembers the last user; use the
-  header button to switch.
-- **Selectable material.** A dropdown in the header selects the training
-  material (only the SR20 reference sheet for now). Progress is tracked
-  per user *per material*.
-- **Cloze deletion with a moving blank.** Each fact is a full sentence; a
-  different token is hidden each time the card comes up, so you never memorize
-  a fixed answer position.
-- **Smart answer routing.** Number blanks (V-speeds, limits) are drilled with
-  **multiple choice** whose wrong options are a mix of *other real SR20 values*
-  (same unit, to force real discrimination) and *plausible near-misses*.
-  Once a card reaches **Box 3**, its number blanks graduate to **type-in**
-  (bare numbers accepted — units optional). Word/phrase blanks (procedures,
-  cautions) are always type-in, checked with fuzzy matching.
-- **Leitner 5-box spaced repetition.** Again → Box 1, Hard → stay, Good → +1,
-  Easy → +2. Box review cadence: every 1 / 2 / 4 / 8 / 16 sessions, so mastered
-  cards resurface rarely and unpredictably while weak cards keep coming back.
-- **Auto-grading.** A correct answer defaults to Good, a wrong answer to Again —
-  press Enter to accept, or tap a button to override.
-- **Persistent.** All progress is written to `sr20_progress.db` (SQLite) right
-  next to the script. Close it, reopen it, switch machines (copy the .db) — your
-  boxes and stats are there. Progress from the old single-user version is
-  migrated automatically to a user named "Tim" on first run.
+- **Cloze with a moving blank.** Each fact is a full sentence; a different
+  token is hidden each time the card comes up.
+- **Number blanks** start as multiple choice (distractors are other real
+  values with the same unit, plus near-misses) and graduate to type-in once
+  the card reaches Box 3. **Word blanks** are always type-in, fuzzy-matched.
+- **Leitner 5-box**, session-based: Again → Box 1, Hard → stay, Good → +1,
+  Easy → +2; boxes resurface every 1 / 2 / 4 / 8 / 16 sessions.
+- Correct answers auto-grade Good, wrong ones Again; Enter accepts, buttons
+  override.
 
-## Run it
+## Accounts and login
+
+Invite-only. There is no sign-up page.
+
+- Sign in with a **passkey** (Windows Hello, Face ID, fingerprint) or an
+  **authenticator-app code** (TOTP). Every account has TOTP; passkeys are
+  added per device from `/settings`.
+- Admins create invite links on `/admin` (or `python manage.py invite <name>
+  [--admin]` on the server). Links are single-use and expire after 72 h.
+- Re-inviting an existing name resets their login (new TOTP secret, passkeys
+  removed) but keeps their study progress. Lost admin access: run the
+  `manage.py invite` command in a PythonAnywhere console.
+- Progress is per account per deck, stored server-side in `sr20_progress.db`.
+
+## Hosting
+
+| Layer | Where | Notes |
+|---|---|---|
+| DNS + edge | Cloudflare (proxied) | Full (strict) TLS, Always-HTTPS, min TLS 1.2, Bot Fight Mode, `www` → apex redirect |
+| App | PythonAnywhere web app `studybuddy.foo` | Python 3.13, virtualenv `study-venv`, WSGI `/var/www/studybuddy_foo_wsgi.py`, Cloudflare origin cert (exp. 2041) |
+| Code | GitHub `Timotao2/study-app` | working copy `~/code/study-app` on Tim's PC |
+
+PythonAnywhere shows two permanent warnings for this app — "unable to find a
+CNAME" and "certificate CN mismatch". Both are artifacts of the Cloudflare
+proxy and are expected. `.foo` is an HSTS-preloaded TLD: plain HTTP never
+works, so HTTPS must be healthy end-to-end.
+
+## Deploying a change
 
 ```bash
-pip install flask
-python3 app.py
+# on the PC (Git Bash)
+cd ~/code/study-app && git add -A && git commit -m "what changed" && git push
+# on PythonAnywhere (Bash console)
+cd ~/study-app && git pull
+```
+Then **Reload** on the Web tab. If `requirements.txt` changed, also run
+`workon study-venv && pip install -r requirements.txt` before reloading.
+
+## Configuration
+
+`.env` next to `app.py` (never committed; see `.env.example`):
+
+```
+SECRET_KEY=<python manage.py secret>
+RP_ID=studybuddy.foo
+ORIGIN=https://studybuddy.foo
 ```
 
-Then open http://127.0.0.1:5000 in a browser.
+## Running locally
 
-Three tabs: **Drill** (study), **Progress** (box distribution, mastery %,
-accuracy), **All Facts** (every card with its box and review count).
+```bash
+pip install -r requirements.txt
+python manage.py invite Tim --admin      # prints an http://127.0.0.1:5000/enroll/... link
+python app.py
+```
+Open the invite link, enroll a TOTP code, and you're in. Passkeys work on
+`localhost` too.
 
-## Customizing the deck
+## Tests
 
-Edit the `DECK` list in `app.py`. Each entry is a sentence template with
-`[[id]]` blank markers and a `blanks` dict defining each answer, its `kind`
-(`num` or `word`), and optional `alts` (accepted typed variants). Restart the
-app after editing. **Reset** in the UI wipes only the current user's progress
-on the current material; deleting `sr20_progress.db` wipes everything.
-
-## Adding training material
-
-Define another card list like `DECK` in `app.py`, then register it in `DECKS`:
-
-```python
-DECKS = {
-    "sr20": {"name": "Cirrus SR20 Reference", "cards": DECK},
-    "sr22": {"name": "Cirrus SR22 Reference", "cards": SR22_DECK},
-}
+```bash
+python test_auth.py                # server-side flows, needs sr20_progress.db present
+python test_passkey_browser.py     # full WebAuthn ceremony; needs `pip install playwright` + chromium
 ```
 
-It appears in the material dropdown automatically, with separate progress
-tracking per user.
+## Files
+
+| File | Role |
+|---|---|
+| `app.py` | Flask app: deck data, Leitner logic, drill/stats API, embedded trainer UI |
+| `auth.py` | Login blueprint: passkeys, TOTP, invites, admin, settings pages |
+| `manage.py` | CLI: `invite`, `list`, `secret` |
+| `legacy/` | Older standalone artifacts (Anki CSV, static flashcards) — unused |
+
+## Adding a deck (current mechanism)
+
+Define another card list like `DECK` in `app.py` and register it in `DECKS`.
+This is the seam the modular version will replace with per-deck files and a
+PDF → AI-drafted cards → human review pipeline.

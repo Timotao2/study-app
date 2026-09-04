@@ -1,96 +1,91 @@
-# SR20 Trainer — Handoff Document
+# Handoff — StudyBuddy
 
-*Session date: 2026-06-03*
+*Updated 2026-09-04.* Earlier session notes (2026-06-03) are preserved at the
+bottom because the learning-model details still apply.
 
-## What this is
+## State of play
 
-A local Flask + SQLite spaced-repetition study app for memorizing Cirrus SR20
-reference numbers and procedures, sourced from a one-page reference sheet.
-Single file (`app.py`), ~36 cards. Run with `pip install flask`, then
-`python3 app.py`, open http://127.0.0.1:5000. Progress persists to
-`sr20_progress.db` next to the script.
+- **Live** at https://studybuddy.foo behind Cloudflare, on PythonAnywhere as
+  Tim's second web app (the CCV app is the first). Deployed and verified the
+  same day: DNS, origin cert, Full (strict), www redirect, Bot Fight Mode.
+- **Auth shipped**: passkeys + TOTP, invite-only, Tim is admin with one
+  passkey enrolled. Unauthenticated probes of `/api/*` and `/admin` return 401
+  / the login page. README has the deploy loop and config.
+- **Tim's original progress preserved**: his account is linked to the legacy
+  `users` row id 1, so all 36 cards' boxes and stats carried over.
 
-## Work completed this session
+## Decisions Tim made (don't relitigate)
 
-### 1. Fixed dead buttons (bug fix)
+- Cloudflare proxied in front of PA, origin certificate, not Let's Encrypt.
+- Apex `studybuddy.foo` is the canonical host; `www` redirects.
+- Passkeys primary, TOTP mandatory fallback. Invite-only, no open sign-up.
+- Repo is **public** (no secrets in it; `.env` and `*.db` are ignored).
+- Auth first, modularize second — the modular study app is the next phase.
+- Tim declined PythonAnywhere's HTTP-basic password gate in favour of real auth.
 
-Every button in the UI was unresponsive. Root cause: `PAGE` is a Python
-**raw** string, so the JS regex on the cloze blank was served literally as
-`/<b>_____<\\/b>/`. In JS, `\\` escapes the backslash, the next `/` terminates
-the regex early, and the trailing `b>` parses as invalid regex flags — a
-SyntaxError that killed the entire `<script>` block, leaving every `onclick`
-pointing at undefined functions. Fix: `<\\/b>` → `<\/b>`, plus the same
-class of bug in the apostrophe-escaper (`\\\\'` → `\\'`).
+## Next phase: subject-agnostic study app
 
-**Lesson for future edits:** inside the raw-string `PAGE`, write JS escapes
-exactly as the browser should receive them — no doubling for Python.
+Target workflow: **insert PDF → AI-drafted cards → human review/edit →
+deploy as a deck module**, with the SR20 deck becoming module #1.
 
-### 2. Multiple choice → type-in graduation
+Open question at handoff: where card generation runs — (a) Claude API from
+PythonAnywhere at upload time (API key in `.env`, per-PDF cost), (b) generate
+in a Claude chat and commit the deck file, (c) both, starting with (b).
+Recommended: (c). Either way the deck-file format and the review/edit UI are
+needed first.
 
-Number blanks now start as multiple choice and switch to type-in once the
-card reaches **Box 3 ("Familiar")**; if a card falls back to Box 1, it
-returns to MC until it climbs again. Word blanks were always type-in. The
-moving blank is unchanged.
+Design seams already present: `DECKS` registry in `app.py`; progress keyed
+by `(user_id, deck, card_id)`; `NUM_POOLS` built per deck for distractors.
 
-Typed numbers are graded leniently via a new `num_core()` normalizer: bare
-numbers accepted (`67` matches "67 KIAS"), commas/case/spacing ignored,
-`0 to 200` matches "0-200 ft", `3.8` matches "+3.8 G". Per-blank `alts`
-still apply. The drill header shows "type-in · graduated" for promoted cards.
+## Gotchas worth remembering
 
-### 3. Multi-user + selectable training material
+- `PAGE` in `app.py` is a Python **raw** string. Write JS escapes exactly as
+  the browser should receive them (`<\/b>`, not `<\\/b>`).
+- In `auth.py`, the shared JS helpers in `BASE` must stay above `{{ body }}`
+  — page bodies contain inline scripts that call them.
+- TOTP replay guard: the same 6-digit code cannot be used twice within its
+  30 s step. Tests reset `accounts.totp_last_step`.
+- Git for Windows prints "LF will be replaced by CRLF" on every commit —
+  harmless.
+- Never put the git working copy inside Google Drive.
 
-- **User picker** on launch ("Who's studying?") — click a name or type a new
-  one to add it. Last user remembered in browser localStorage; header button
-  switches users. All progress, sessions, and stats are per user.
-- **Material dropdown** in the header, driven by a `DECKS` registry in
-  `app.py`. Only the SR20 deck exists; to add material, define another card
-  list and add one entry:
-  `"sr22": {"name": "Cirrus SR22 Reference", "cards": SR22_DECK}`.
-  Progress is tracked per user *per deck*.
-- **Reset** now scopes to current user + current material only.
-- **Migration:** on first run, data from the old single-user schema
-  auto-migrates to a user named "Tim" (boxes, session counter, stats all
-  preserved). Old tables kept as `cards_legacy` / `meta_legacy` backups.
+## Security notes
 
-## Current architecture
+Rate limits: 5 failed TOTP logins per username, 15 per IP, per 15 min.
+Sessions: signed cookie, 30 days, Secure/HttpOnly/SameSite=Lax. Residual
+items, deliberately not done: Cloudflare rate-limit rule on `/auth/*`;
+Flask check that requests carry Cloudflare headers (PA origin hostname is
+discoverable and bypasses the proxy but not the app auth).
 
-Single `app.py`:
+---
 
-- `DECK` — card list: sentence templates with `[[id]]` markers; each blank is
+# Earlier handoff — 2026-06-03 (learning model, still accurate)
+
+## Fixed dead buttons
+
+Every button was unresponsive because the JS regex on the cloze blank was
+served as `/<b>_____<\\/b>/` from the raw-string `PAGE`. Fix: `<\/b>`.
+
+## Multiple choice → type-in graduation
+
+Number blanks start as multiple choice and switch to type-in at **Box 3**;
+falling back to Box 1 returns them to MC. `num_core()` normalises typed
+numbers leniently (`67` matches "67 KIAS", `0 to 200` matches "0-200 ft").
+
+## Architecture
+
+- `DECK` — sentence templates with `[[id]]` markers; each blank is
   `{"a": answer, "kind": "num"|"word", "alts": [...]}`.
-- `DECKS` — registry of materials; `NUM_POOLS` — per-deck distractor pools.
-- SQLite tables: `users(id, name)`,
-  `progress(user_id, deck, card_id, box, last_session, seen, correct)`,
-  `sessions(user_id, deck, session)`.
-- Leitner 5-box: Again→Box 1, Hard→stay, Good→+1, Easy→+2; review cadence
-  1/2/4/8/16 sessions; correct answers auto-grade Good, wrong auto-Again
-  (Enter accepts, buttons override).
-- API: `GET/POST /api/users`, `GET /api/decks`, `GET /api/next`,
-  `POST /api/answer`, `POST /api/grade`, `POST /api/session/advance`,
-  `GET /api/stats`, `POST /api/reset`. All take `user` + `deck`
-  (query params on GET, JSON body on POST).
-- Frontend: embedded HTML/JS in the `PAGE` raw string; tabs Drill /
-  Progress / All Facts; the JS `api()` helper injects user/deck on every call.
+- `DECKS` registry; `NUM_POOLS` per-deck distractor pools.
+- SQLite: `users(id, name)`, `progress(user_id, deck, card_id, box,
+  last_session, seen, correct)`, `sessions(user_id, deck, session)`; plus the
+  auth tables documented in `auth.py`.
+- API: `GET /api/me`, `GET /api/decks`, `GET /api/next`, `POST /api/answer`,
+  `POST /api/grade`, `POST /api/session/advance`, `GET /api/stats`,
+  `POST /api/reset`. All take `deck`; identity comes from the session.
+- Per-card (not per-blank) Leitner state.
 
-## Verification performed
+## Ideas discussed, not built
 
-All via a sandboxed copy: page JS parses (`node --check`); full drill loop
-exercised through the API; `num_core` checked against 18 normalization cases;
-MC vs type-in routing checked at Box 1 and Box 3 over repeated draws;
-migration tested against a replica of the old schema (values preserved,
-idempotent re-init); two-user isolation confirmed (grades, advances, and
-resets don't leak between users); unknown decks rejected.
-
-## Known limitations / notes
-
-- Per-card (not per-blank) Leitner state: all blanks in a sentence share one
-  box. Mode graduation keys off the card's box.
-- `sr20_flashcards.html`, `sr20_deck.py`, `sr20_deck.json`, `sr20_anki.csv`
-  are older standalone artifacts, untouched and unused by `app.py`.
-- The app binds to 127.0.0.1 — local use only, no auth (user picker is
-  convenience, not security).
-
-## Ideas discussed but not built
-
-- Confusion-pairs focused mode (Vx/Vy, three Va weights, Vs/Vso back-to-back).
-- Per-category accuracy breakdown on the Progress tab.
+- Confusion-pairs mode (Vx/Vy, the three Va weights, Vs/Vso back-to-back).
+- Per-category accuracy on the Progress tab.
