@@ -18,7 +18,14 @@ Adding training material: define another card list like DECK below, then add
 one entry to DECKS, e.g.  "sr22": {"name": "Cirrus SR22 Reference", "cards": SR22_DECK}
 It will appear in the material dropdown automatically.
 
-Adding users: just type a name in the "Who's studying?" screen in the app.
+Adding users: invite-only. An admin creates an invite link on /admin (or with
+    python manage.py invite <name> [--admin]); the invitee enrolls an
+    authenticator app and, optionally, a passkey. See auth.py.
+
+Configuration (.env next to this file, loaded at import):
+    SECRET_KEY   required in production — python -c "import secrets;print(secrets.token_hex(32))"
+    RP_ID        WebAuthn relying-party id, e.g. studybuddy.foo (defaults to request host)
+    ORIGIN       e.g. https://studybuddy.foo (defaults from request; used for invite links)
 
 Learning model:
     * Leitner 5-box, session-based scheduling (cadence 1/2/4/8/16).
@@ -29,10 +36,15 @@ Learning model:
       Word blanks -> always type-in, checked with fuzzy match.
     * Grading maps to Leitner: Again->box1, Hard->stay, Good->+1, Easy->+2.
 """
-import json, os, re, sqlite3, random
-from flask import Flask, request, jsonify, Response
+import json, os, re, sqlite3, random, secrets
+from datetime import timedelta
+from flask import Flask, request, jsonify, Response, g, redirect
+from dotenv import load_dotenv
+import auth
 
-DB = os.path.join(os.path.dirname(os.path.abspath(__file__)), "sr20_progress.db")
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+load_dotenv(os.path.join(BASE_DIR, ".env"))
+DB = os.path.join(BASE_DIR, "sr20_progress.db")
 CADENCE = {1: 1, 2: 2, 3: 4, 4: 8, 5: 16}
 BOX_LABEL = {1: "Learning", 2: "Shaky", 3: "Familiar", 4: "Solid", 5: "Mastered"}
 
@@ -223,35 +235,46 @@ def make_choices(answer, deck):
 # ---------------------------------------------------------------------------
 app = Flask(__name__)
 
+_secret = os.environ.get("SECRET_KEY")
+if not _secret:
+    _secret = secrets.token_hex(32)
+    print("WARNING: SECRET_KEY not set in .env — sessions will not survive a restart.")
+app.config.update(
+    SECRET_KEY=_secret,
+    SESSION_COOKIE_NAME="sb_session",
+    SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SAMESITE="Lax",
+    SESSION_COOKIE_SECURE=os.environ.get("ORIGIN", "").startswith("https://"),
+    PERMANENT_SESSION_LIFETIME=timedelta(days=30),
+    MAX_CONTENT_LENGTH=64 * 1024,
+)
+auth.db = db
+app.register_blueprint(auth.bp)
+login_required = auth.login_required
+
+@app.after_request
+def security_headers(resp):
+    resp.headers.setdefault("X-Content-Type-Options", "nosniff")
+    resp.headers.setdefault("X-Frame-Options", "DENY")
+    resp.headers.setdefault("Referrer-Policy", "same-origin")
+    resp.headers.setdefault("Cache-Control", "no-store")
+    return resp
+
 @app.route("/")
 def index():
+    if auth.current_account() is None:
+        return redirect("/login")
     return Response(PAGE, mimetype="text/html")
 
-@app.route("/api/users")
-def api_users():
-    con=db(); rows=con.execute("SELECT * FROM users ORDER BY name COLLATE NOCASE").fetchall(); con.close()
-    return jsonify({"users":[{"id":r["id"],"name":r["name"]} for r in rows]})
-
-@app.route("/api/users", methods=["POST"])
-def api_add_user():
-    name=(request.get_json().get("name") or "").strip()
-    if not name: return jsonify({"error":"name required"}), 400
-    con=db()
-    try:
-        cur=con.execute("INSERT INTO users(name) VALUES(?)", (name,)); con.commit()
-        uid=cur.lastrowid
-    except sqlite3.IntegrityError:          # name exists -> just select that user
-        uid=con.execute("SELECT id FROM users WHERE name=?", (name,)).fetchone()["id"]
-    con.close()
-    return jsonify({"id":uid,"name":name})
-
 @app.route("/api/decks")
+@login_required
 def api_decks():
     return jsonify({"decks":[{"id":k,"name":v["name"],"count":len(v["cards"])} for k,v in DECKS.items()]})
 
 @app.route("/api/next")
+@login_required
 def api_next():
-    uid=int(request.args["user"]); deck=request.args.get("deck","sr20")
+    uid=g.user_id; deck=request.args.get("deck","sr20")
     if deck not in DECKS: return jsonify({"error":"unknown deck"}), 400
     ensure_rows(uid, deck)
     cards_def=DECKS[deck]["cards"]
@@ -283,11 +306,14 @@ def api_next():
     return jsonify(payload)
 
 @app.route("/api/answer", methods=["POST"])
+@login_required
 def api_answer():
     d=request.get_json()
     deck=d.get("deck","sr20")
-    cid=int(d["id"]); bid=d["blank_id"]; given=(d.get("answer") or "").strip()
-    blank=DECKS[deck]["cards"][cid]["blanks"][bid]
+    if deck not in DECKS: return jsonify({"error":"unknown deck"}), 400
+    cid=int(d["id"]); bid=str(d["blank_id"]); given=str(d.get("answer") or "").strip()
+    try: blank=DECKS[deck]["cards"][cid]["blanks"][bid]
+    except (IndexError, KeyError): return jsonify({"error":"unknown card"}), 400
     accepted=[blank["a"].lower()]+[a.lower() for a in blank.get("alts",[])]
     norm=lambda s: re.sub(r"\s+"," ",s.lower().strip())
     correct = norm(given) in [norm(a) for a in accepted]
@@ -297,32 +323,38 @@ def api_answer():
     return jsonify({"correct":correct,"answer":blank["a"]})
 
 @app.route("/api/grade", methods=["POST"])
+@login_required
 def api_grade():
     d=request.get_json()
-    uid=int(d["user"]); deck=d.get("deck","sr20"); cid=int(d["id"]); g=d["grade"]
+    uid=g.user_id; deck=d.get("deck","sr20"); cid=int(d["id"]); gr=d["grade"]
+    if deck not in DECKS: return jsonify({"error":"unknown deck"}), 400
     session=get_session(uid, deck)
     con=db(); r=con.execute("SELECT * FROM progress WHERE user_id=? AND deck=? AND card_id=?",
                             (uid,deck,cid)).fetchone()
+    if r is None: con.close(); return jsonify({"error":"unknown card"}), 400
     box=r["box"]; correct=r["correct"]
-    if g=="again": box=1
-    elif g=="hard": pass
-    elif g=="good": box=min(5,box+1); correct+=1
-    elif g=="easy": box=min(5,box+2); correct+=1
+    if gr=="again": box=1
+    elif gr=="hard": pass
+    elif gr=="good": box=min(5,box+1); correct+=1
+    elif gr=="easy": box=min(5,box+2); correct+=1
+    else: con.close(); return jsonify({"error":"bad grade"}), 400
     con.execute("""UPDATE progress SET box=?, seen=seen+1, correct=?, last_session=?
                    WHERE user_id=? AND deck=? AND card_id=?""",
                 (box,correct,session,uid,deck,cid)); con.commit(); con.close()
     return jsonify({"ok":True})
 
 @app.route("/api/session/advance", methods=["POST"])
+@login_required
 def api_advance():
-    d=request.get_json(); uid=int(d["user"]); deck=d.get("deck","sr20")
+    d=request.get_json(); uid=g.user_id; deck=d.get("deck","sr20")
     con=db(); con.execute("UPDATE sessions SET session=session+1 WHERE user_id=? AND deck=?", (uid,deck))
     con.commit(); con.close()
     return jsonify({"session":get_session(uid,deck)})
 
 @app.route("/api/stats")
+@login_required
 def api_stats():
-    uid=int(request.args["user"]); deck=request.args.get("deck","sr20")
+    uid=g.user_id; deck=request.args.get("deck","sr20")
     if deck not in DECKS: return jsonify({"error":"unknown deck"}), 400
     ensure_rows(uid, deck)
     cards_def=DECKS[deck]["cards"]
@@ -341,8 +373,9 @@ def api_stats():
                     "cards":cards})
 
 @app.route("/api/reset", methods=["POST"])
+@login_required
 def api_reset():
-    d=request.get_json(); uid=int(d["user"]); deck=d.get("deck","sr20")
+    d=request.get_json(); uid=g.user_id; deck=d.get("deck","sr20")
     con=db()
     con.execute("UPDATE progress SET box=1,last_session=0,seen=0,correct=0 WHERE user_id=? AND deck=?", (uid,deck))
     con.execute("UPDATE sessions SET session=1 WHERE user_id=? AND deck=?", (uid,deck))
@@ -420,8 +453,10 @@ footer{margin-top:30px;font-family:'Spline Sans Mono',monospace;font-size:11px;c
 <header><div><h1>SR20 <span>Trainer</span></h1><div class="sub">cloze · moving blank · Leitner</div></div>
 <div class="ctrls">
 <select id="deckSel" class="mini" onchange="setDeck(this.value)"></select>
-<button class="mini" id="whoBtn" onclick="showUserPicker()">&#128100; —</button>
+<a class="mini" id="whoBtn" href="/settings" title="Security settings" style="text-decoration:none">&#128100; —</a>
+<a class="mini hidden" id="admBtn" href="/admin" style="text-decoration:none">admin</a>
 <button class="mini" onclick="resetAll()">↺ Reset</button>
+<button class="mini" onclick="signOut()">Sign out</button>
 </div></header>
 <nav><button id="t-study" class="active" onclick="show('study')">Drill</button>
 <button id="t-progress" onclick="show('progress')">Progress</button>
@@ -430,61 +465,35 @@ footer{margin-top:30px;font-family:'Spline Sans Mono',monospace;font-size:11px;c
 <section id="v-study"></section>
 <section id="v-progress" class="hidden"></section>
 <section id="v-cards" class="hidden"></section>
-<footer>Each user's progress saves automatically to sr20_progress.db on disk. Number blanks → multiple choice until a card reaches Box 3, then type-in (bare numbers OK); word blanks → always type-in.<br>Each correct answer auto-grades Good — override with the buttons if it felt harder or easier.</footer>
+<footer>Your progress saves automatically on the server. Number blanks → multiple choice until a card reaches Box 3, then type-in (bare numbers OK); word blanks → always type-in.<br>Each correct answer auto-grades Good — override with the buttons if it felt harder or easier.</footer>
 </div>
 <script>
 let cur=null, answered=false, USER=null, DECK='sr20', ALL_DECKS=[], currentTab='study';
 const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+// Identity comes from the login session; the server ignores any client-supplied user id.
 const api=(u,m,b)=>{
-  let url=u;
-  if(USER) url+=(u.includes('?')?'&':'?')+'user='+USER.id+'&deck='+encodeURIComponent(DECK);
-  const body=b?JSON.stringify(Object.assign({user:USER?USER.id:null,deck:DECK},b)):undefined;
-  return fetch(url,{method:m||'GET',headers:{'Content-Type':'application/json'},body}).then(r=>r.json());
+  let url=u+(u.includes('?')?'&':'?')+'deck='+encodeURIComponent(DECK);
+  const body=b?JSON.stringify(Object.assign({deck:DECK},b)):undefined;
+  return fetch(url,{method:m||'GET',headers:{'Content-Type':'application/json'},body}).then(r=>{
+    if(r.status===401){location.href='/login';return new Promise(()=>{});}
+    return r.json();});
 };
+async function signOut(){await fetch('/auth/logout',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});location.href='/login';}
 
-// ---------- users & decks ----------
+// ---------- identity & decks ----------
 async function boot(){
+  USER=await api('/api/me');
   ALL_DECKS=(await api('/api/decks')).decks;
   const savedDeck=localStorage.getItem('trainer_deck');
   if(savedDeck && ALL_DECKS.some(d=>d.id===savedDeck)) DECK=savedDeck;
   const sel=document.getElementById('deckSel');
   sel.innerHTML=ALL_DECKS.map(d=>`<option value="${esc(d.id)}">${esc(d.name)} (${d.count})</option>`).join('');
   sel.value=DECK;
-  const users=(await api('/api/users')).users;
-  const saved=localStorage.getItem('trainer_user');
-  if(saved){
-    const p=JSON.parse(saved);
-    const hit=users.find(x=>x.id===p.id);
-    if(hit){USER=hit; updateHeader(); show('study'); return;}
-  }
-  showUserPicker(users);
-}
-async function showUserPicker(users){
-  if(!users) users=(await api('/api/users')).users;
-  ['study','progress','cards'].forEach(x=>document.getElementById('v-'+x).classList.add('hidden'));
-  const v=document.getElementById('v-user'); v.classList.remove('hidden');
-  v.innerHTML=`<div class="card" style="text-align:center">
-    <div class="face-label">Who's studying?</div>
-    <div class="userlist">${users.map(u=>`<button class="userbtn" data-id="${u.id}" data-name="${esc(u.name)}"
-      onclick="pickUser(+this.dataset.id,this.dataset.name)">${esc(u.name)}</button>`).join('')
-      ||'<p class="sub">No users yet — add one below.</p>'}</div>
-    <div class="typein" style="max-width:420px;margin:26px auto 0">
-      <input id="nu" placeholder="new user name…" autocomplete="off" onkeydown="if(event.key==='Enter')addUser()">
-      <button onclick="addUser()">Add</button></div></div>`;
-  document.getElementById('nu').focus();
-}
-function pickUser(id,name){
-  USER={id,name}; localStorage.setItem('trainer_user',JSON.stringify(USER));
-  document.getElementById('v-user').classList.add('hidden');
   updateHeader(); show('study');
 }
-async function addUser(){
-  const n=document.getElementById('nu').value.trim(); if(!n)return;
-  const r=await api('/api/users','POST',{name:n});
-  pickUser(r.id,r.name);
-}
 function updateHeader(){
-  document.getElementById('whoBtn').innerHTML='&#128100; '+esc(USER.name);
+  document.getElementById('whoBtn').innerHTML='&#128100; '+esc(USER.name)+(USER.passkeys?'':' <span title="No passkey yet — click to add one">&#9888;</span>');
+  document.getElementById('admBtn').classList.toggle('hidden',!USER.is_admin);
   document.getElementById('deckSel').value=DECK;
 }
 function setDeck(d){
@@ -494,7 +503,7 @@ function setDeck(d){
 
 // ---------- tabs ----------
 function show(t){
-  if(!USER){showUserPicker();return;}
+  if(!USER)return;
   currentTab=t;
   document.getElementById('v-user').classList.add('hidden');
   ['study','progress','cards'].forEach(x=>{
@@ -586,15 +595,16 @@ async function loadCards(){
 }
 async function resetAll(){
   if(!USER)return;
-  if(confirm(`Reset ${USER.name}'s progress on this material?`)){await api('/api/reset','POST',{});show('study');}
+  if(confirm(`Reset your progress on this material?`)){await api('/api/reset','POST',{});show('study');}
 }
 boot();
 </script></body></html>
 """
 
 init_db()
+auth.init_auth_db()
 
 if __name__=="__main__":
-    init_db()
     print("Trainer running at http://127.0.0.1:5000  (Ctrl-C to stop)")
+    print("No account yet?  python manage.py invite <name> --admin")
     app.run(debug=False, port=5000)
