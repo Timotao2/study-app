@@ -1,0 +1,146 @@
+#!/usr/bin/env python3
+"""
+Cirrus SR20 flashcard deck generator + exporter.
+
+Builds a full deck from the SR20 reference sheet and exports:
+  - sr20_deck.json   (full deck + Leitner state scaffold, importable into the HTML app)
+  - sr20_anki.csv    (Front,Back,Tags -- Anki "Basic" import)
+
+Leitner model (5 boxes), session-based scheduling:
+  Box review cadence (every N sessions): {1:1, 2:2, 3:4, 4:8, 5:16}
+  Grade -> box move:  Again->box1, Hard->stay, Good->+1, Easy->+2
+"""
+
+import csv
+import json
+
+CADENCE = {1: 1, 2: 2, 3: 4, 4: 8, 5: 16}  # review every N sessions
+
+# (front, back, category)
+CARDS = [
+    # --- V-speeds & limits ---
+    ("Vr (Normal rotation, 50% flaps)", "67 KIAS", "V-speeds"),
+    ("Vx (Best angle of climb) SL / 10K", "81 / 85 KIAS", "V-speeds"),
+    ("Vy (Best rate of climb) SL / 10K", "96 / 91 KIAS", "V-speeds"),
+    ("Vglide (Best glide) at 3000# / 2500#", "96 KIAS / 87 KIAS", "V-speeds"),
+    ("Vpd (Max CAPS deployment speed)", "135 KIAS", "V-speeds"),
+    ("Va (Design maneuvering) at 3000#", "131 KIAS", "V-speeds"),
+    ("Va (Design maneuvering) at 2600#", "122 KIAS", "V-speeds"),
+    ("Va (Design maneuvering) at 2200#", "111 KIAS", "V-speeds"),
+    ("Vfe with flaps 50%", "120 KIAS", "V-speeds"),
+    ("Vfe with flaps 100%", "100 KIAS", "V-speeds"),
+    ("Vno (Max structural cruise)", "165 KIAS", "V-speeds"),
+    ("Vne (Never exceed)", "200 KIAS", "V-speeds"),
+    ("Vso (Stall, flaps 100%)", "56 KIAS", "V-speeds"),
+    ("Vs (Stall, clean)", "65 KIAS", "V-speeds"),
+    # --- Powerplant / weights / capacities ---
+    ("Engine power / RPM", "200 HP @ 2700 RPM", "Limits"),
+    ("Load factor limits", "+3.8 / -1.9 G", "Limits"),
+    ("Max cargo area weight", "130 lb", "Limits"),
+    ("Maximum glide ratio", "10.9 : 1", "Limits"),
+    ("Mag drop limits (max / max differential)", "150 RPM max drop / 75 RPM diff", "Limits"),
+    ("Usable fuel", "56 gal", "Limits"),
+    ("Max takeoff / landing weight", "3000 / 2900 lb", "Limits"),
+    ("Max full-fuel payload", "622 lb", "Limits"),
+    ("Max useful load", "950 lb", "Limits"),
+    ("Oil quantity (min / max)", "6 qt min / 8 qt max", "Limits"),
+    # --- Takeoff procedures ---
+    ("Normal T/O: flap setting & rotate speed",
+     "Flaps 50%, rotate at 67 KIAS, establish Vy attitude, flaps up at 85 KIAS, climb 96 KIAS", "Takeoff"),
+    ("Short Field / Obstacle T/O",
+     "Flaps 50%, full-power run-up, release brakes, rotate 65 KIAS, pull to Vx attitude, climb 81 KIAS until obstacle cleared, then Vy + flaps up, climb 96 KIAS", "Takeoff"),
+    ("Soft Field T/O",
+     "Flaps 50%, full aft yoke, full power, reduce back pressure to hold Vy attitude, at liftoff lower nose in ground effect to 81 KIAS, then Vy attitude, flaps up, climb 96 KIAS", "Takeoff"),
+    ("Enroute climb speed (for cooling)", "5 to 10 knots higher than Vy", "Takeoff"),
+    ("Cruise power & leaning", "70-75% power; lean to best power or best economy", "Cruise"),
+    # --- Landing procedures ---
+    ("Normal Landing - downwind setup",
+     "Fullest fuel tank, boost on, mixture full rich; abeam touchdown: 1500 RPM, 100 KIAS", "Landing"),
+    ("Normal Landing - base & final speeds",
+     "Base: flaps 50%, 90 KIAS. Final: flaps 100%, 75 KIAS", "Landing"),
+    ("Balked Landing",
+     "Full power, flaps 50%, climb 81 KIAS, hold flaps 50% until obstacles cleared, then retract & Vy attitude / 96 KIAS", "Landing"),
+    ("Short Field Landing",
+     "Like normal but aim long, fly last segment at 75 KIAS, pull power early, float to spot, land 0-200 ft of spot, flaps up, lower nose wheel, brake as required", "Landing"),
+    ("Soft Field Landing",
+     "Like normal but leave power at 1100-1200 RPM through touchdown; touch down at ~Vy attitude with minimum sink rate", "Landing"),
+    # --- Air work / maneuvers ---
+    ("Steep Turns procedure",
+     "Clear area, slow to Va, smoothly roll to 45/50 deg bank, add back pressure to hold altitude, +100-200 RPM for airspeed, lead rollout by 20 deg", "Maneuvers"),
+    ("Slow Flight setup",
+     "Clear area, power 1500 RPM, flaps 50% below 120 KIAS / 100% below 100 KIAS, pitch to hold altitude, ~70 KIAS add power, adjust pitch+power", "Maneuvers"),
+    ("Slow Flight recovery",
+     "Vy pitch + full power, flaps 50%, as airspeed builds flaps up", "Maneuvers"),
+    ("Power-Off Stall entry",
+     "Clear area, power 1500 RPM, flaps 50% below 120 KIAS / 100% below 100 KIAS, establish 75 KIAS final picture, power idle, pitch to Vy until first indication of stall", "Maneuvers"),
+    ("Power-Off Stall recovery",
+     "Full power, flaps 50%, pitch to level then Vy attitude and climb, flaps up at original altitude", "Maneuvers"),
+    ("Power-On Stall entry",
+     "Clear area, power 1500 RPM, at 75 KIAS full power, pitch above Vx and hold until first indication of stall", "Maneuvers"),
+    ("Power-On Stall recovery",
+     "Pitch to level attitude then Vy attitude until VSI reversal", "Maneuvers"),
+    ("Emergency Landing flow",
+     "Glide at Vglide for weight, trim, attempt restart per checklist; if no prepared surface, pull CAPS handle no lower than 2000 ft AGL", "Emergency"),
+    ("Ground Reference Maneuvers / Lazy 8s power", "Cruise power (70-75%)", "Maneuvers"),
+    ("Chandelle procedure",
+     "Cruise power (70-75%), roll into 30 deg bank, full power, execute; at 90 deg ~18 deg nose high and 75 KIAS", "Maneuvers"),
+    ("Holding airspeed", "110 KIAS", "Instrument"),
+    ("Instrument Approach airspeeds",
+     "110 KIAS (~70% power) until approaching FAF; cross FAF at 100 KIAS (~50%); final 100 KIAS (~25% power for 500 FPM descent)", "Instrument"),
+    # --- Notes & cautions ---
+    ("Alternators during engine start", "Leave OFF during start to avoid high electrical loads", "Cautions"),
+    ("Why is weight & balance critical?", "Nose-heavy design", "Cautions"),
+    ("Aerobatics / spins", "Prohibited", "Cautions"),
+    ("Flight into known icing", "Prohibited", "Cautions"),
+    ("Maximum operating altitude", "17,500 ft MSL", "Cautions"),
+    ("Minimum autopilot engagement altitude", "400 ft AGL", "Cautions"),
+    ("Max demonstrated crosswind component", "21 knots", "Cautions"),
+    ("CAPS callouts after T/O and on approach",
+     "'CAPS available' passing 500 ft AGL after takeoff; 'Negative CAPS' passing 500 ft AGL on approach", "Cautions"),
+    ("Spin recovery method", "CAPS deployment ONLY", "Cautions"),
+]
+
+
+def build_deck():
+    deck = []
+    for i, (front, back, cat) in enumerate(CARDS, start=1):
+        deck.append({
+            "id": i,
+            "front": front,
+            "back": back,
+            "category": cat,
+            "box": 1,            # Leitner box 1-5
+            "lastSession": 0,    # session index last reviewed
+            "seen": 0,
+            "correct": 0,        # Good/Easy answers
+        })
+    return deck
+
+
+def export_json(deck, path="sr20_deck.json"):
+    payload = {
+        "name": "Cirrus SR20 Numbers",
+        "cadence": CADENCE,
+        "session": 0,
+        "cards": deck,
+    }
+    with open(path, "w") as f:
+        json.dump(payload, f, indent=2)
+    return path
+
+
+def export_anki_csv(deck, path="sr20_anki.csv"):
+    with open(path, "w", newline="") as f:
+        w = csv.writer(f)
+        for c in deck:
+            w.writerow([c["front"], c["back"], c["category"]])
+    return path
+
+
+if __name__ == "__main__":
+    deck = build_deck()
+    j = export_json(deck)
+    csvp = export_anki_csv(deck)
+    print(f"Deck built: {len(deck)} cards")
+    print(f"  JSON -> {j}")
+    print(f"  CSV  -> {csvp}")

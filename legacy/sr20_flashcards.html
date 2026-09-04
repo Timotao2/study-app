@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SR20 Numbers — Leitner Deck</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Spline+Sans+Mono:wght@400;500;600&family=Sora:wght@400;600;700;800&display=swap');
+
+  :root{
+    --bg:#0b1014; --panel:#121a20; --panel2:#16212a; --ink:#e9f1f4;
+    --muted:#7e94a0; --line:#243038; --accent:#ff7a18; --accent2:#19c2c2;
+    --good:#36c46e; --hard:#e8b730; --again:#ef5350; --easy:#3aa0ff;
+    --b1:#ef5350; --b2:#e8b730; --b3:#cfd84a; --b4:#36c46e; --b5:#19c2c2;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    font-family:'Sora',sans-serif; background:
+      radial-gradient(1200px 600px at 80% -10%, #15323a 0%, transparent 55%),
+      radial-gradient(900px 500px at -10% 110%, #2a1607 0%, transparent 50%),
+      var(--bg);
+    color:var(--ink); min-height:100vh; padding:24px 16px 60px;
+  }
+  .wrap{max-width:860px;margin:0 auto}
+  header{display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:6px}
+  h1{font-size:26px;font-weight:800;letter-spacing:-.5px}
+  h1 span{color:var(--accent)}
+  .sub{color:var(--muted);font-family:'Spline Sans Mono',monospace;font-size:12px;letter-spacing:1px;text-transform:uppercase}
+  nav{display:flex;gap:6px;margin:18px 0 22px;flex-wrap:wrap}
+  nav button{
+    font-family:'Spline Sans Mono',monospace;font-size:12px;letter-spacing:.5px;
+    background:var(--panel);color:var(--muted);border:1px solid var(--line);
+    padding:9px 16px;border-radius:999px;cursor:pointer;transition:.15s;text-transform:uppercase
+  }
+  nav button.active{background:var(--accent);color:#1a0d00;border-color:var(--accent);font-weight:600}
+  nav button:hover:not(.active){color:var(--ink);border-color:var(--accent)}
+  .ctrls{display:flex;gap:8px;flex-wrap:wrap;margin-left:auto}
+  .mini{font-family:'Spline Sans Mono',monospace;font-size:11px;padding:9px 12px;border-radius:8px;
+    background:var(--panel2);color:var(--muted);border:1px solid var(--line);cursor:pointer;transition:.15s}
+  .mini:hover{color:var(--ink);border-color:var(--accent2)}
+
+  /* STUDY */
+  .stage{display:flex;flex-direction:column;align-items:center;gap:20px}
+  .progress-line{width:100%;height:6px;background:var(--panel);border-radius:99px;overflow:hidden}
+  .progress-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));width:0;transition:width .3s}
+  .meta{width:100%;display:flex;justify-content:space-between;font-family:'Spline Sans Mono',monospace;font-size:11px;color:var(--muted)}
+  .card{
+    width:100%;min-height:300px;background:linear-gradient(160deg,var(--panel2),var(--panel));
+    border:1px solid var(--line);border-radius:20px;padding:40px 32px;cursor:pointer;
+    display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;
+    position:relative;transition:.2s;box-shadow:0 20px 60px -30px rgba(0,0,0,.8)
+  }
+  .card:hover{border-color:var(--accent2)}
+  .cat-tag{position:absolute;top:16px;left:20px;font-family:'Spline Sans Mono',monospace;font-size:10px;
+    letter-spacing:1.5px;text-transform:uppercase;color:var(--accent2)}
+  .box-pip{position:absolute;top:16px;right:20px;font-family:'Spline Sans Mono',monospace;font-size:10px;
+    letter-spacing:1px;color:var(--muted)}
+  .face-label{font-family:'Spline Sans Mono',monospace;font-size:11px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:18px}
+  .front-text{font-size:24px;font-weight:700;line-height:1.3}
+  .back-text{font-size:22px;font-weight:600;line-height:1.45;color:var(--accent)}
+  .hint{font-family:'Spline Sans Mono',monospace;font-size:11px;color:var(--muted);margin-top:24px}
+  .grades{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;width:100%}
+  .grades button{
+    font-family:'Sora';font-weight:700;font-size:14px;padding:16px 8px;border-radius:12px;border:none;cursor:pointer;
+    color:#0b1014;transition:.15s;display:flex;flex-direction:column;gap:3px;align-items:center
+  }
+  .grades button small{font-family:'Spline Sans Mono',monospace;font-weight:400;font-size:9px;opacity:.75}
+  .grades button:hover{transform:translateY(-2px)}
+  .g-again{background:var(--again)} .g-hard{background:var(--hard)}
+  .g-good{background:var(--good)} .g-easy{background:var(--easy)}
+  .done{text-align:center;padding:60px 20px}
+  .done h2{font-size:24px;margin-bottom:10px}
+  .done p{color:var(--muted)}
+
+  /* PROGRESS */
+  .boxes{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:26px}
+  .boxcell{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px 10px;text-align:center}
+  .boxcell .n{font-size:30px;font-weight:800}
+  .boxcell .l{font-family:'Spline Sans Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-top:4px}
+  .boxcell .cad{font-family:'Spline Sans Mono',monospace;font-size:9px;color:var(--muted);margin-top:6px}
+  .bar1{color:var(--b1)} .bar2{color:var(--b2)} .bar3{color:var(--b3)} .bar4{color:var(--b4)} .bar5{color:var(--b5)}
+  .stats{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:24px}
+  .stat{flex:1;min-width:120px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+  .stat .v{font-size:22px;font-weight:800}
+  .stat .k{font-family:'Spline Sans Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px}
+
+  /* TABLE */
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th{font-family:'Spline Sans Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);
+    text-align:left;padding:10px 8px;border-bottom:1px solid var(--line)}
+  td{padding:10px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+  tr:hover td{background:var(--panel)}
+  .pill{display:inline-block;font-family:'Spline Sans Mono',monospace;font-size:10px;padding:2px 8px;border-radius:99px;font-weight:600}
+  .filterbar{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
+  .filterbar button{font-family:'Spline Sans Mono',monospace;font-size:11px;padding:6px 12px;border-radius:99px;
+    background:var(--panel);border:1px solid var(--line);color:var(--muted);cursor:pointer}
+  .filterbar button.on{background:var(--accent2);color:#04201f;border-color:var(--accent2)}
+  .hidden{display:none!important}
+  footer{margin-top:30px;font-family:'Spline Sans Mono',monospace;font-size:11px;color:var(--muted);text-align:center;line-height:1.7}
+  input[type=file]{display:none}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>SR20 <span>Numbers</span></h1>
+      <div class="sub">Leitner 5-box · randomized interleave</div>
+    </div>
+    <div class="ctrls">
+      <button class="mini" onclick="exportJSON()">⤓ Export progress</button>
+      <button class="mini" onclick="document.getElementById('imp').click()">⤒ Import</button>
+      <input type="file" id="imp" accept=".json" onchange="importJSON(event)">
+      <button class="mini" onclick="resetAll()">↺ Reset</button>
+    </div>
+  </header>
+
+  <nav>
+    <button id="tab-study" class="active" onclick="show('study')">Study</button>
+    <button id="tab-progress" onclick="show('progress')">Progress</button>
+    <button id="tab-cards" onclick="show('cards')">All Cards</button>
+  </nav>
+
+  <section id="view-study"></section>
+  <section id="view-progress" class="hidden"></section>
+  <section id="view-cards" class="hidden"></section>
+
+  <footer>
+    Sessions advance each time you finish a due queue. Box cadence: B1 every session · B2 /2 · B3 /4 · B4 /8 · B5 /16.<br>
+    Progress lives in this tab only — Export to save, Import to resume on another device.
+  </footer>
+</div>
+
+<script>
+const CADENCE={1:1,2:2,3:4,4:8,5:16};
+const BOX_LABEL={1:"Learning",2:"Shaky",3:"Familiar",4:"Solid",5:"Mastered"};
+const SEED_CARDS=[{"id": 1, "front": "Vr (Normal rotation, 50% flaps)", "back": "67 KIAS", "category": "V-speeds", "box": 1, "lastSession": 0, "seen": 0, "correct": 0}, {"id": 2, "front": "Vx (Best angle of climb) SL / 10K", "back": "81 / 85 KIAS", "category": "V-speeds", "box": 1, "lastSession": 0, "seen": 0, "correct": 0}, {"id": 3, "front": "Vy (Best rate of climb) SL / 10K", "back": "96 / 91 KIAS", "category": "V-speeds", "box": 1, "lastSession": 0, "seen": 0, "correct": 0}, {"id": 4, "front": "Vglide (Best glide) at 3000# / 2500#", "back": "96 KIAS / 87 KIAS", "category": "V-speeds", "box": 1, "lastSession": 0, "seen": 0, "correct": 0}, {"id": 5, "front": "Vpd (Max CAPS deployment speed)", "back": "135 KIAS", "category": "V-speeds", "box": 1, "lastSession": 0, "seen": 0, "correct": 0}, {"id": 6, "front": "Va (Design maneuvering) at 3000#", "back": "131 KIAS", "category": "V-speeds", "box": 1, "lastSession": 0, "seen": 0, "correct": 0}, {"id": 7, "front": "Va (Design maneuvering) at 2600#", "back": "122 KIAS", "category": "V-speeds", "box": 1, "lastSession": 0, "seen": 0, "correct": 0}, {"id": 8, "front": "Va (Design maneuvering) at 2200#", "back": "111 KIAS", "category": "V-speeds", "box": 1, "lastSession": 0, "seen": 0, "correct": 0}, {"id": 9, "front": "Vfe with flaps 50%", "back": "120 KIAS", "category": "V-speeds", "box": 1, "lastSession": 0, "seen": 0, "correct": 0}, {"id": 10, "front": "Vfe with flaps 100%", "back": "100 KIAS", "category": "V-speeds", "box": 1, "lastSession": 0, "seen": 0, "correct": 0}, {"id": 11, "front": "Vno (Max structural cruise)", "back": "165 KIAS", "category": "V-speeds", "box": 1, "lastSession": 0, "seen": 0, "correct": 0}, {"id": 12, "front": "Vne (Never exceed)", "back": "200 KIAS", "category": "V-speeds", "box": 1, "lastSession": 0, "seen": 0, "correct": 0}, {"id": 13, "front": "Vso (Stall, flaps 100%)", "back": "56 KIAS", "category": "V-speeds", "box": 1, "lastSession": 0, "seen": 0, "correct": 0}, {"id": 14, "front": "Vs (Stall, clean)", "back": "65 KIAS", "category": "V-speeds", "box": 1, "lastSession": 0, "seen": 0, "correct": 0}, {"id": 15, "front": "Engine power / RPM", "back": "200 HP @ 2700 RPM", "category": "Limits", "box": 1, "lastSession": 0, "seen": 0, "correct": 0}, {"id": 16, "front": "Load factor limits", "back": "+3.8 / -1.9 G", "category": "Limits", "box": 1, "lastSession": 0, "seen": 0, "correct": 0}, {"id": 17, "front": "Max cargo area weight", "back": "130 lb", "category": "Limits", "box": 1, "lastSession": 0, "seen": 0, "correct": 0}, {"id": 18, "front": "Maximum glide ratio", "back": "10.9 : 1", "category": "Limits", "box": 1, "lastSession": 0, "seen": 0, "correct": 0}, {"id": 19, "front": "Mag drop limits (max / max differential)", "back": "150 RPM max drop / 75 RPM diff", "category": "Limits", "box": 1, "lastSession": 0, "seen": 0, "correct": 0}, {"id": 20, "front": "Usable fuel", "back": "56 gal", "category": "Limits", "box": 1, "lastSession": 0, "seen": 0, "correct": 0}, {"id": 21, "front": "Max takeoff / landing weight", "back": "3000 / 2900 lb", "category": "Limits", "box": 1, "lastSession": 0, "seen": 0, "correct": 0}, {"id": 22, "front": "Max full-fuel payload", "back": "622 lb", "category": "Limits", "box": 1, "lastSession": 0, "seen": 0, "correct": 0}, {"id": 23, "front": "Max useful load", "back": "950 lb", "category": "Limits", "box": 1, "lastSession": 0, "seen": 0, "correct": 0}, {"id": 24, "front": "Oil quantity (min / max)", "back": "6 qt min / 8 qt max", "category": "Limits", "box": 1, "lastSession": 0, "seen": 0, "correct": 0}, {"id": 25, "front": "Normal T/O: flap setting & rotate speed", "back": "Flaps 50%, rotate at 67 KIAS, establish Vy attitude, flaps up at 85 KIAS, climb 96 KIAS", "category": "Takeoff", "box": 1, "lastSession": 0, "seen": 0, "correct": 0}, {"id": 26, "front": "Short Field / Obstacle T/O", "back": "Flaps 50%, full-power run-up, release brakes, rotate 65 KIAS, pull to Vx attitude, climb 81 KIAS until obstacle cleared, then Vy + flaps up, climb 96 KIAS", "category": "Takeoff", "box": 1, "lastSession": 0, "seen": 0, "correct": 0}, {"id": 27, "front": "Soft Field T/O", "back": "Flaps 50%, full aft yoke, full power, reduce back pressure to hold Vy attitude, at liftoff lower nose in ground effect to 81 KIAS, then Vy attitude, flaps up, climb 96 KIAS", "category": "Takeoff", "box": 1, "lastSession": 0, "seen": 0, "correct": 0}, {"id": 28, "front": "Enroute climb speed (for cooling)", "back": "5 to 10 knots higher than Vy", "category": "Takeoff", "box": 1, "lastSession": 0, "seen": 0, "correct": 0}, {"id": 29, "front": "Cruise power & leaning", "back": "70-75% power; lean to best power or best economy", "category": "Cruise", "box": 1, "lastSession": 0, "seen": 0, "correct": 0}, {"id": 30, "front": "Normal Landing - downwind setup", "back": "Fullest fuel tank, boost on, mixture full rich; abeam touchdown: 1500 RPM, 100 KIAS", "category": "Landing", "box": 1, "lastSession": 0, "seen": 0, "correct": 0}, {"id": 31, "front": "Normal Landing - base & final speeds", "back": "Base: flaps 50%, 90 KIAS. Final: flaps 100%, 75 KIAS", "category": "Landing", "box": 1, "lastSession": 0, "seen": 0, "correct": 0}, {"id": 32, "front": "Balked Landing", "back": "Full power, flaps 50%, climb 81 KIAS, hold flaps 50% until obstacles cleared, then retract & Vy attitude / 96 KIAS", "category": "Landing", "box": 1, "lastSession": 0, "seen": 0, "correct": 0}, {"id": 33, "front": "Short Field Landing", "back": "Like normal but aim long, fly last segment at 75 KIAS, pull power early, float to spot, land 0-200 ft of spot, flaps up, lower nose wheel, brake as required", "category": "Landing", "box": 1, "lastSession": 0, "seen": 0, "correct": 0}, {"id": 34, "front": "Soft Field Landing", "back": "Like normal but leave power at 1100-1200 RPM through touchdown; touch down at ~Vy attitude with minimum sink rate", "category": "Landing", "box": 1, "lastSession": 0, "seen": 0, "correct": 0}, {"id": 35, "front": "Steep Turns procedure", "back": "Clear area, slow to Va, smoothly roll to 45/50 deg bank, add back pressure to hold altitude, +100-200 RPM for airspeed, lead rollout by 20 deg", "category": "Maneuvers", "box": 1, "lastSession": 0, "seen": 0, "correct": 0}, {"id": 36, "front": "Slow Flight setup", "back": "Clear area, power 1500 RPM, flaps 50% below 120 KIAS / 100% below 100 KIAS, pitch to hold altitude, ~70 KIAS add power, adjust pitch+power", "category": "Maneuvers", "box": 1, "lastSession": 0, "seen": 0, "correct": 0}, {"id": 37, "front": "Slow Flight recovery", "back": "Vy pitch + full power, flaps 50%, as airspeed builds flaps up", "category": "Maneuvers", "box": 1, "lastSession": 0, "seen": 0, "correct": 0}, {"id": 38, "front": "Power-Off Stall entry", "back": "Clear area, power 1500 RPM, flaps 50% below 120 KIAS / 100% below 100 KIAS, establish 75 KIAS final picture, power idle, pitch to Vy until first indication of stall", "category": "Maneuvers", "box": 1, "lastSession": 0, "seen": 0, "correct": 0}, {"id": 39, "front": "Power-Off Stall recovery", "back": "Full power, flaps 50%, pitch to level then Vy attitude and climb, flaps up at original altitude", "category": "Maneuvers", "box": 1, "lastSession": 0, "seen": 0, "correct": 0}, {"id": 40, "front": "Power-On Stall entry", "back": "Clear area, power 1500 RPM, at 75 KIAS full power, pitch above Vx and hold until first indication of stall", "category": "Maneuvers", "box": 1, "lastSession": 0, "seen": 0, "correct": 0}, {"id": 41, "front": "Power-On Stall recovery", "back": "Pitch to level attitude then Vy attitude until VSI reversal", "category": "Maneuvers", "box": 1, "lastSession": 0, "seen": 0, "correct": 0}, {"id": 42, "front": "Emergency Landing flow", "back": "Glide at Vglide for weight, trim, attempt restart per checklist; if no prepared surface, pull CAPS handle no lower than 2000 ft AGL", "category": "Emergency", "box": 1, "lastSession": 0, "seen": 0, "correct": 0}, {"id": 43, "front": "Ground Reference Maneuvers / Lazy 8s power", "back": "Cruise power (70-75%)", "category": "Maneuvers", "box": 1, "lastSession": 0, "seen": 0, "correct": 0}, {"id": 44, "front": "Chandelle procedure", "back": "Cruise power (70-75%), roll into 30 deg bank, full power, execute; at 90 deg ~18 deg nose high and 75 KIAS", "category": "Maneuvers", "box": 1, "lastSession": 0, "seen": 0, "correct": 0}, {"id": 45, "front": "Holding airspeed", "back": "110 KIAS", "category": "Instrument", "box": 1, "lastSession": 0, "seen": 0, "correct": 0}, {"id": 46, "front": "Instrument Approach airspeeds", "back": "110 KIAS (~70% power) until approaching FAF; cross FAF at 100 KIAS (~50%); final 100 KIAS (~25% power for 500 FPM descent)", "category": "Instrument", "box": 1, "lastSession": 0, "seen": 0, "correct": 0}, {"id": 47, "front": "Alternators during engine start", "back": "Leave OFF during start to avoid high electrical loads", "category": "Cautions", "box": 1, "lastSession": 0, "seen": 0, "correct": 0}, {"id": 48, "front": "Why is weight & balance critical?", "back": "Nose-heavy design", "category": "Cautions", "box": 1, "lastSession": 0, "seen": 0, "correct": 0}, {"id": 49, "front": "Aerobatics / spins", "back": "Prohibited", "category": "Cautions", "box": 1, "lastSession": 0, "seen": 0, "correct": 0}, {"id": 50, "front": "Flight into known icing", "back": "Prohibited", "category": "Cautions", "box": 1, "lastSession": 0, "seen": 0, "correct": 0}, {"id": 51, "front": "Maximum operating altitude", "back": "17,500 ft MSL", "category": "Cautions", "box": 1, "lastSession": 0, "seen": 0, "correct": 0}, {"id": 52, "front": "Minimum autopilot engagement altitude", "back": "400 ft AGL", "category": "Cautions", "box": 1, "lastSession": 0, "seen": 0, "correct": 0}, {"id": 53, "front": "Max demonstrated crosswind component", "back": "21 knots", "category": "Cautions", "box": 1, "lastSession": 0, "seen": 0, "correct": 0}, {"id": 54, "front": "CAPS callouts after T/O and on approach", "back": "'CAPS available' passing 500 ft AGL after takeoff; 'Negative CAPS' passing 500 ft AGL on approach", "category": "Cautions", "box": 1, "lastSession": 0, "seen": 0, "correct": 0}, {"id": 55, "front": "Spin recovery method", "back": "CAPS deployment ONLY", "category": "Cautions", "box": 1, "lastSession": 0, "seen": 0, "correct": 0}];
+
+let state={ session:0, cards:JSON.parse(JSON.stringify(SEED_CARDS)) };
+let queue=[], qIdx=0, flipped=false, cardFilter='all';
+
+/* ---------- scheduling ---------- */
+function isDue(c){ return (state.session - c.lastSession) >= CADENCE[c.box]; }
+function shuffle(a){ for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];} return a; }
+
+function buildQueue(){
+  queue = shuffle(state.cards.filter(isDue).map(c=>c.id));
+  qIdx=0; flipped=false;
+}
+function grade(g){
+  const c=state.cards.find(x=>x.id===queue[qIdx]);
+  c.seen++;
+  if(g==='again'){ c.box=1; }
+  else if(g==='hard'){ /* stay */ }
+  else if(g==='good'){ c.box=Math.min(5,c.box+1); c.correct++; }
+  else if(g==='easy'){ c.box=Math.min(5,c.box+2); c.correct++; }
+  c.lastSession=state.session;
+  qIdx++; flipped=false;
+  renderStudy();
+}
+
+/* ---------- study view ---------- */
+function renderStudy(){
+  const v=document.getElementById('view-study');
+  if(queue.length===0) buildQueue();
+  if(qIdx>=queue.length){
+    state.session++;            // advance session when queue clears
+    const nextDue=state.cards.filter(isDue).length;
+    v.innerHTML=`<div class="done">
+      <h2>Session complete ✈</h2>
+      <p>${queue.length} cards reviewed. Session #${state.session} unlocked.</p>
+      <p style="margin-top:14px">${nextDue} card${nextDue===1?'':'s'} now due.</p>
+      <div style="margin-top:22px"><button class="mini" onclick="buildQueue();renderStudy()">Start next session →</button></div>
+    </div>`;
+    queue=[];
+    return;
+  }
+  const c=state.cards.find(x=>x.id===queue[qIdx]);
+  const pct=Math.round((qIdx/queue.length)*100);
+  v.innerHTML=`
+    <div class="stage">
+      <div class="progress-line"><div class="progress-fill" style="width:${pct}%"></div></div>
+      <div class="meta"><span>Card ${qIdx+1} / ${queue.length}</span><span>Session #${state.session}</span></div>
+      <div class="card" onclick="flip()">
+        <div class="cat-tag">${c.category}</div>
+        <div class="box-pip">Box ${c.box} · ${BOX_LABEL[c.box]}</div>
+        ${flipped
+          ? `<div class="face-label">Answer</div><div class="back-text">${esc(c.back)}</div>`
+          : `<div class="face-label">Prompt</div><div class="front-text">${esc(c.front)}</div>
+             <div class="hint">tap to reveal</div>`}
+      </div>
+      ${flipped?`
+      <div class="grades">
+        <button class="g-again" onclick="grade('again')">Again<small>→ Box 1</small></button>
+        <button class="g-hard" onclick="grade('hard')">Hard<small>stay Box ${c.box}</small></button>
+        <button class="g-good" onclick="grade('good')">Good<small>→ Box ${Math.min(5,c.box+1)}</small></button>
+        <button class="g-easy" onclick="grade('easy')">Easy<small>→ Box ${Math.min(5,c.box+2)}</small></button>
+      </div>`:`<div style="height:60px"></div>`}
+    </div>`;
+}
+function flip(){ flipped=!flipped; renderStudy(); }
+
+/* ---------- progress view ---------- */
+function renderProgress(){
+  const v=document.getElementById('view-progress');
+  const counts={1:0,2:0,3:0,4:0,5:0};
+  state.cards.forEach(c=>counts[c.box]++);
+  const total=state.cards.length;
+  const seen=state.cards.filter(c=>c.seen>0).length;
+  const mastered=counts[5];
+  const totalSeen=state.cards.reduce((s,c)=>s+c.seen,0);
+  const totalCorrect=state.cards.reduce((s,c)=>s+c.correct,0);
+  const acc=totalSeen?Math.round(totalCorrect/totalSeen*100):0;
+  const due=state.cards.filter(isDue).length;
+  v.innerHTML=`
+    <div class="boxes">
+      ${[1,2,3,4,5].map(b=>`<div class="boxcell">
+        <div class="n bar${b}">${counts[b]}</div>
+        <div class="l">${BOX_LABEL[b]}</div>
+        <div class="cad">every ${CADENCE[b]} sess</div></div>`).join('')}
+    </div>
+    <div class="stats">
+      <div class="stat"><div class="v">${mastered}/${total}</div><div class="k">Mastered (Box 5)</div></div>
+      <div class="stat"><div class="v">${seen}/${total}</div><div class="k">Cards touched</div></div>
+      <div class="stat"><div class="v">${acc}%</div><div class="k">Grade accuracy</div></div>
+      <div class="stat"><div class="v">${due}</div><div class="k">Due now</div></div>
+      <div class="stat"><div class="v">${state.session}</div><div class="k">Sessions done</div></div>
+    </div>
+    <div class="progress-line"><div class="progress-fill" style="width:${Math.round(mastered/total*100)}%"></div></div>
+    <div class="meta" style="margin-top:8px"><span>Mastery</span><span>${Math.round(mastered/total*100)}%</span></div>`;
+}
+
+/* ---------- all cards view ---------- */
+function renderCards(){
+  const v=document.getElementById('view-cards');
+  const cats=['all',...new Set(state.cards.map(c=>c.category))];
+  const rows=state.cards
+    .filter(c=>cardFilter==='all'||c.category===cardFilter)
+    .map(c=>{
+      const color=`var(--b${c.box})`;
+      const acc=c.seen?Math.round(c.correct/c.seen*100)+'%':'—';
+      return `<tr>
+        <td><span class="pill" style="background:${color};color:#0b1014">B${c.box}</span></td>
+        <td>${esc(c.front)}</td>
+        <td style="color:var(--accent)">${esc(c.back)}</td>
+        <td style="color:var(--muted);font-family:'Spline Sans Mono',monospace;font-size:11px">${c.seen}× · ${acc}</td>
+      </tr>`;}).join('');
+  v.innerHTML=`
+    <div class="filterbar">
+      ${cats.map(cat=>`<button class="${cardFilter===cat?'on':''}" onclick="cardFilter='${cat}';renderCards()">${cat}</button>`).join('')}
+    </div>
+    <table><thead><tr><th>Box</th><th>Prompt</th><th>Answer</th><th>Reviews</th></tr></thead>
+    <tbody>${rows}</tbody></table>`;
+}
+
+/* ---------- nav + io ---------- */
+function show(t){
+  ['study','progress','cards'].forEach(x=>{
+    document.getElementById('view-'+x).classList.toggle('hidden',x!==t);
+    document.getElementById('tab-'+x).classList.toggle('active',x===t);
+  });
+  if(t==='study') renderStudy();
+  if(t==='progress') renderProgress();
+  if(t==='cards') renderCards();
+}
+function esc(s){return s.replace(/[&<>]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[m]));}
+
+function exportJSON(){
+  const blob=new Blob([JSON.stringify({name:"Cirrus SR20 Numbers",cadence:CADENCE,session:state.session,cards:state.cards},null,2)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  a.download='sr20_progress.json';a.click();
+}
+function importJSON(e){
+  const f=e.target.files[0]; if(!f)return;
+  const r=new FileReader();
+  r.onload=()=>{try{
+    const d=JSON.parse(r.result);
+    if(d.cards){ state.cards=d.cards; state.session=d.session||0; queue=[];
+      alert('Imported '+d.cards.length+' cards · session #'+state.session); show('study'); }
+    else alert('Not a valid deck file.');
+  }catch{alert('Could not parse JSON.');}};
+  r.readAsText(f);
+}
+function resetAll(){
+  if(confirm('Reset all boxes and stats to fresh?')){
+    state={session:0,cards:JSON.parse(JSON.stringify(SEED_CARDS))};queue=[];show('study');
+  }
+}
+buildQueue();
+renderStudy();
+</script>
+</body>
+</html>

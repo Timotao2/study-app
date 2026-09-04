@@ -1,0 +1,563 @@
+{
+  "name": "Cirrus SR20 Numbers",
+  "cadence": {
+    "1": 1,
+    "2": 2,
+    "3": 4,
+    "4": 8,
+    "5": 16
+  },
+  "session": 0,
+  "cards": [
+    {
+      "id": 1,
+      "front": "Vr (Normal rotation, 50% flaps)",
+      "back": "67 KIAS",
+      "category": "V-speeds",
+      "box": 1,
+      "lastSession": 0,
+      "seen": 0,
+      "correct": 0
+    },
+    {
+      "id": 2,
+      "front": "Vx (Best angle of climb) SL / 10K",
+      "back": "81 / 85 KIAS",
+      "category": "V-speeds",
+      "box": 1,
+      "lastSession": 0,
+      "seen": 0,
+      "correct": 0
+    },
+    {
+      "id": 3,
+      "front": "Vy (Best rate of climb) SL / 10K",
+      "back": "96 / 91 KIAS",
+      "category": "V-speeds",
+      "box": 1,
+      "lastSession": 0,
+      "seen": 0,
+      "correct": 0
+    },
+    {
+      "id": 4,
+      "front": "Vglide (Best glide) at 3000# / 2500#",
+      "back": "96 KIAS / 87 KIAS",
+      "category": "V-speeds",
+      "box": 1,
+      "lastSession": 0,
+      "seen": 0,
+      "correct": 0
+    },
+    {
+      "id": 5,
+      "front": "Vpd (Max CAPS deployment speed)",
+      "back": "135 KIAS",
+      "category": "V-speeds",
+      "box": 1,
+      "lastSession": 0,
+      "seen": 0,
+      "correct": 0
+    },
+    {
+      "id": 6,
+      "front": "Va (Design maneuvering) at 3000#",
+      "back": "131 KIAS",
+      "category": "V-speeds",
+      "box": 1,
+      "lastSession": 0,
+      "seen": 0,
+      "correct": 0
+    },
+    {
+      "id": 7,
+      "front": "Va (Design maneuvering) at 2600#",
+      "back": "122 KIAS",
+      "category": "V-speeds",
+      "box": 1,
+      "lastSession": 0,
+      "seen": 0,
+      "correct": 0
+    },
+    {
+      "id": 8,
+      "front": "Va (Design maneuvering) at 2200#",
+      "back": "111 KIAS",
+      "category": "V-speeds",
+      "box": 1,
+      "lastSession": 0,
+      "seen": 0,
+      "correct": 0
+    },
+    {
+      "id": 9,
+      "front": "Vfe with flaps 50%",
+      "back": "120 KIAS",
+      "category": "V-speeds",
+      "box": 1,
+      "lastSession": 0,
+      "seen": 0,
+      "correct": 0
+    },
+    {
+      "id": 10,
+      "front": "Vfe with flaps 100%",
+      "back": "100 KIAS",
+      "category": "V-speeds",
+      "box": 1,
+      "lastSession": 0,
+      "seen": 0,
+      "correct": 0
+    },
+    {
+      "id": 11,
+      "front": "Vno (Max structural cruise)",
+      "back": "165 KIAS",
+      "category": "V-speeds",
+      "box": 1,
+      "lastSession": 0,
+      "seen": 0,
+      "correct": 0
+    },
+    {
+      "id": 12,
+      "front": "Vne (Never exceed)",
+      "back": "200 KIAS",
+      "category": "V-speeds",
+      "box": 1,
+      "lastSession": 0,
+      "seen": 0,
+      "correct": 0
+    },
+    {
+      "id": 13,
+      "front": "Vso (Stall, flaps 100%)",
+      "back": "56 KIAS",
+      "category": "V-speeds",
+      "box": 1,
+      "lastSession": 0,
+      "seen": 0,
+      "correct": 0
+    },
+    {
+      "id": 14,
+      "front": "Vs (Stall, clean)",
+      "back": "65 KIAS",
+      "category": "V-speeds",
+      "box": 1,
+      "lastSession": 0,
+      "seen": 0,
+      "correct": 0
+    },
+    {
+      "id": 15,
+      "front": "Engine power / RPM",
+      "back": "200 HP @ 2700 RPM",
+      "category": "Limits",
+      "box": 1,
+      "lastSession": 0,
+      "seen": 0,
+      "correct": 0
+    },
+    {
+      "id": 16,
+      "front": "Load factor limits",
+      "back": "+3.8 / -1.9 G",
+      "category": "Limits",
+      "box": 1,
+      "lastSession": 0,
+      "seen": 0,
+      "correct": 0
+    },
+    {
+      "id": 17,
+      "front": "Max cargo area weight",
+      "back": "130 lb",
+      "category": "Limits",
+      "box": 1,
+      "lastSession": 0,
+      "seen": 0,
+      "correct": 0
+    },
+    {
+      "id": 18,
+      "front": "Maximum glide ratio",
+      "back": "10.9 : 1",
+      "category": "Limits",
+      "box": 1,
+      "lastSession": 0,
+      "seen": 0,
+      "correct": 0
+    },
+    {
+      "id": 19,
+      "front": "Mag drop limits (max / max differential)",
+      "back": "150 RPM max drop / 75 RPM diff",
+      "category": "Limits",
+      "box": 1,
+      "lastSession": 0,
+      "seen": 0,
+      "correct": 0
+    },
+    {
+      "id": 20,
+      "front": "Usable fuel",
+      "back": "56 gal",
+      "category": "Limits",
+      "box": 1,
+      "lastSession": 0,
+      "seen": 0,
+      "correct": 0
+    },
+    {
+      "id": 21,
+      "front": "Max takeoff / landing weight",
+      "back": "3000 / 2900 lb",
+      "category": "Limits",
+      "box": 1,
+      "lastSession": 0,
+      "seen": 0,
+      "correct": 0
+    },
+    {
+      "id": 22,
+      "front": "Max full-fuel payload",
+      "back": "622 lb",
+      "category": "Limits",
+      "box": 1,
+      "lastSession": 0,
+      "seen": 0,
+      "correct": 0
+    },
+    {
+      "id": 23,
+      "front": "Max useful load",
+      "back": "950 lb",
+      "category": "Limits",
+      "box": 1,
+      "lastSession": 0,
+      "seen": 0,
+      "correct": 0
+    },
+    {
+      "id": 24,
+      "front": "Oil quantity (min / max)",
+      "back": "6 qt min / 8 qt max",
+      "category": "Limits",
+      "box": 1,
+      "lastSession": 0,
+      "seen": 0,
+      "correct": 0
+    },
+    {
+      "id": 25,
+      "front": "Normal T/O: flap setting & rotate speed",
+      "back": "Flaps 50%, rotate at 67 KIAS, establish Vy attitude, flaps up at 85 KIAS, climb 96 KIAS",
+      "category": "Takeoff",
+      "box": 1,
+      "lastSession": 0,
+      "seen": 0,
+      "correct": 0
+    },
+    {
+      "id": 26,
+      "front": "Short Field / Obstacle T/O",
+      "back": "Flaps 50%, full-power run-up, release brakes, rotate 65 KIAS, pull to Vx attitude, climb 81 KIAS until obstacle cleared, then Vy + flaps up, climb 96 KIAS",
+      "category": "Takeoff",
+      "box": 1,
+      "lastSession": 0,
+      "seen": 0,
+      "correct": 0
+    },
+    {
+      "id": 27,
+      "front": "Soft Field T/O",
+      "back": "Flaps 50%, full aft yoke, full power, reduce back pressure to hold Vy attitude, at liftoff lower nose in ground effect to 81 KIAS, then Vy attitude, flaps up, climb 96 KIAS",
+      "category": "Takeoff",
+      "box": 1,
+      "lastSession": 0,
+      "seen": 0,
+      "correct": 0
+    },
+    {
+      "id": 28,
+      "front": "Enroute climb speed (for cooling)",
+      "back": "5 to 10 knots higher than Vy",
+      "category": "Takeoff",
+      "box": 1,
+      "lastSession": 0,
+      "seen": 0,
+      "correct": 0
+    },
+    {
+      "id": 29,
+      "front": "Cruise power & leaning",
+      "back": "70-75% power; lean to best power or best economy",
+      "category": "Cruise",
+      "box": 1,
+      "lastSession": 0,
+      "seen": 0,
+      "correct": 0
+    },
+    {
+      "id": 30,
+      "front": "Normal Landing - downwind setup",
+      "back": "Fullest fuel tank, boost on, mixture full rich; abeam touchdown: 1500 RPM, 100 KIAS",
+      "category": "Landing",
+      "box": 1,
+      "lastSession": 0,
+      "seen": 0,
+      "correct": 0
+    },
+    {
+      "id": 31,
+      "front": "Normal Landing - base & final speeds",
+      "back": "Base: flaps 50%, 90 KIAS. Final: flaps 100%, 75 KIAS",
+      "category": "Landing",
+      "box": 1,
+      "lastSession": 0,
+      "seen": 0,
+      "correct": 0
+    },
+    {
+      "id": 32,
+      "front": "Balked Landing",
+      "back": "Full power, flaps 50%, climb 81 KIAS, hold flaps 50% until obstacles cleared, then retract & Vy attitude / 96 KIAS",
+      "category": "Landing",
+      "box": 1,
+      "lastSession": 0,
+      "seen": 0,
+      "correct": 0
+    },
+    {
+      "id": 33,
+      "front": "Short Field Landing",
+      "back": "Like normal but aim long, fly last segment at 75 KIAS, pull power early, float to spot, land 0-200 ft of spot, flaps up, lower nose wheel, brake as required",
+      "category": "Landing",
+      "box": 1,
+      "lastSession": 0,
+      "seen": 0,
+      "correct": 0
+    },
+    {
+      "id": 34,
+      "front": "Soft Field Landing",
+      "back": "Like normal but leave power at 1100-1200 RPM through touchdown; touch down at ~Vy attitude with minimum sink rate",
+      "category": "Landing",
+      "box": 1,
+      "lastSession": 0,
+      "seen": 0,
+      "correct": 0
+    },
+    {
+      "id": 35,
+      "front": "Steep Turns procedure",
+      "back": "Clear area, slow to Va, smoothly roll to 45/50 deg bank, add back pressure to hold altitude, +100-200 RPM for airspeed, lead rollout by 20 deg",
+      "category": "Maneuvers",
+      "box": 1,
+      "lastSession": 0,
+      "seen": 0,
+      "correct": 0
+    },
+    {
+      "id": 36,
+      "front": "Slow Flight setup",
+      "back": "Clear area, power 1500 RPM, flaps 50% below 120 KIAS / 100% below 100 KIAS, pitch to hold altitude, ~70 KIAS add power, adjust pitch+power",
+      "category": "Maneuvers",
+      "box": 1,
+      "lastSession": 0,
+      "seen": 0,
+      "correct": 0
+    },
+    {
+      "id": 37,
+      "front": "Slow Flight recovery",
+      "back": "Vy pitch + full power, flaps 50%, as airspeed builds flaps up",
+      "category": "Maneuvers",
+      "box": 1,
+      "lastSession": 0,
+      "seen": 0,
+      "correct": 0
+    },
+    {
+      "id": 38,
+      "front": "Power-Off Stall entry",
+      "back": "Clear area, power 1500 RPM, flaps 50% below 120 KIAS / 100% below 100 KIAS, establish 75 KIAS final picture, power idle, pitch to Vy until first indication of stall",
+      "category": "Maneuvers",
+      "box": 1,
+      "lastSession": 0,
+      "seen": 0,
+      "correct": 0
+    },
+    {
+      "id": 39,
+      "front": "Power-Off Stall recovery",
+      "back": "Full power, flaps 50%, pitch to level then Vy attitude and climb, flaps up at original altitude",
+      "category": "Maneuvers",
+      "box": 1,
+      "lastSession": 0,
+      "seen": 0,
+      "correct": 0
+    },
+    {
+      "id": 40,
+      "front": "Power-On Stall entry",
+      "back": "Clear area, power 1500 RPM, at 75 KIAS full power, pitch above Vx and hold until first indication of stall",
+      "category": "Maneuvers",
+      "box": 1,
+      "lastSession": 0,
+      "seen": 0,
+      "correct": 0
+    },
+    {
+      "id": 41,
+      "front": "Power-On Stall recovery",
+      "back": "Pitch to level attitude then Vy attitude until VSI reversal",
+      "category": "Maneuvers",
+      "box": 1,
+      "lastSession": 0,
+      "seen": 0,
+      "correct": 0
+    },
+    {
+      "id": 42,
+      "front": "Emergency Landing flow",
+      "back": "Glide at Vglide for weight, trim, attempt restart per checklist; if no prepared surface, pull CAPS handle no lower than 2000 ft AGL",
+      "category": "Emergency",
+      "box": 1,
+      "lastSession": 0,
+      "seen": 0,
+      "correct": 0
+    },
+    {
+      "id": 43,
+      "front": "Ground Reference Maneuvers / Lazy 8s power",
+      "back": "Cruise power (70-75%)",
+      "category": "Maneuvers",
+      "box": 1,
+      "lastSession": 0,
+      "seen": 0,
+      "correct": 0
+    },
+    {
+      "id": 44,
+      "front": "Chandelle procedure",
+      "back": "Cruise power (70-75%), roll into 30 deg bank, full power, execute; at 90 deg ~18 deg nose high and 75 KIAS",
+      "category": "Maneuvers",
+      "box": 1,
+      "lastSession": 0,
+      "seen": 0,
+      "correct": 0
+    },
+    {
+      "id": 45,
+      "front": "Holding airspeed",
+      "back": "110 KIAS",
+      "category": "Instrument",
+      "box": 1,
+      "lastSession": 0,
+      "seen": 0,
+      "correct": 0
+    },
+    {
+      "id": 46,
+      "front": "Instrument Approach airspeeds",
+      "back": "110 KIAS (~70% power) until approaching FAF; cross FAF at 100 KIAS (~50%); final 100 KIAS (~25% power for 500 FPM descent)",
+      "category": "Instrument",
+      "box": 1,
+      "lastSession": 0,
+      "seen": 0,
+      "correct": 0
+    },
+    {
+      "id": 47,
+      "front": "Alternators during engine start",
+      "back": "Leave OFF during start to avoid high electrical loads",
+      "category": "Cautions",
+      "box": 1,
+      "lastSession": 0,
+      "seen": 0,
+      "correct": 0
+    },
+    {
+      "id": 48,
+      "front": "Why is weight & balance critical?",
+      "back": "Nose-heavy design",
+      "category": "Cautions",
+      "box": 1,
+      "lastSession": 0,
+      "seen": 0,
+      "correct": 0
+    },
+    {
+      "id": 49,
+      "front": "Aerobatics / spins",
+      "back": "Prohibited",
+      "category": "Cautions",
+      "box": 1,
+      "lastSession": 0,
+      "seen": 0,
+      "correct": 0
+    },
+    {
+      "id": 50,
+      "front": "Flight into known icing",
+      "back": "Prohibited",
+      "category": "Cautions",
+      "box": 1,
+      "lastSession": 0,
+      "seen": 0,
+      "correct": 0
+    },
+    {
+      "id": 51,
+      "front": "Maximum operating altitude",
+      "back": "17,500 ft MSL",
+      "category": "Cautions",
+      "box": 1,
+      "lastSession": 0,
+      "seen": 0,
+      "correct": 0
+    },
+    {
+      "id": 52,
+      "front": "Minimum autopilot engagement altitude",
+      "back": "400 ft AGL",
+      "category": "Cautions",
+      "box": 1,
+      "lastSession": 0,
+      "seen": 0,
+      "correct": 0
+    },
+    {
+      "id": 53,
+      "front": "Max demonstrated crosswind component",
+      "back": "21 knots",
+      "category": "Cautions",
+      "box": 1,
+      "lastSession": 0,
+      "seen": 0,
+      "correct": 0
+    },
+    {
+      "id": 54,
+      "front": "CAPS callouts after T/O and on approach",
+      "back": "'CAPS available' passing 500 ft AGL after takeoff; 'Negative CAPS' passing 500 ft AGL on approach",
+      "category": "Cautions",
+      "box": 1,
+      "lastSession": 0,
+      "seen": 0,
+      "correct": 0
+    },
+    {
+      "id": 55,
+      "front": "Spin recovery method",
+      "back": "CAPS deployment ONLY",
+      "category": "Cautions",
+      "box": 1,
+      "lastSession": 0,
+      "seen": 0,
+      "correct": 0
+    }
+  ]
+}
