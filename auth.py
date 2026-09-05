@@ -17,8 +17,9 @@ Tables (added to the same SQLite file as progress):
     invites(id, account_id, token_hash, expires, used)
     login_attempts(key, ts)
 """
-import os, json, time, secrets, hashlib, functools, sqlite3, base64
-from datetime import datetime, timezone
+import os, json, time, secrets, hashlib, functools, sqlite3, base64, hmac, smtplib, threading, sys
+from datetime import datetime, timezone, date
+from email.message import EmailMessage
 
 import pyotp, segno
 from flask import (Blueprint, request, session, g, jsonify, redirect, url_for,
@@ -60,7 +61,18 @@ def init_auth_db():
         token_hash TEXT UNIQUE NOT NULL, expires REAL, used INTEGER DEFAULT 0);
     CREATE TABLE IF NOT EXISTS login_attempts(key TEXT, ts REAL);
     CREATE INDEX IF NOT EXISTS ix_attempts ON login_attempts(key, ts);
+    CREATE TABLE IF NOT EXISTS settings(k TEXT PRIMARY KEY, v TEXT);
     """)
+    con.commit(); con.close()
+
+def get_setting(k, default=None):
+    con = db(); r = con.execute("SELECT v FROM settings WHERE k=?", (k,)).fetchone(); con.close()
+    return r["v"] if r else default
+
+def set_setting(k, v):
+    con = db()
+    if v is None: con.execute("DELETE FROM settings WHERE k=?", (k,))
+    else: con.execute("INSERT OR REPLACE INTO settings(k,v) VALUES(?,?)", (k, str(v)))
     con.commit(); con.close()
 
 # ---------------------------------------------------------------------------
@@ -136,10 +148,64 @@ def fails(key):
     n = con.execute("SELECT COUNT(*) FROM login_attempts WHERE key=?", (key,)).fetchone()[0]
     con.commit(); con.close(); return n
 
+THRESHOLDS = {"u:": MAX_FAILS_USER, "ip:": MAX_FAILS_IP, "inv:": MAX_FAILS_USER, "code:": MAX_FAILS_USER}
+KIND = {"u:": "TOTP login for account", "ip:": "TOTP logins from IP", "inv:": "invite-link enrolment from IP",
+        "code:": "invite-code sign-up from IP"}
+
 def record_fail(*keys):
+    """Log a failed attempt; when a key crosses its lockout threshold, email the admin."""
     con = db()
     for k in keys: con.execute("INSERT INTO login_attempts(key,ts) VALUES(?,?)", (k, now()))
-    con.commit(); con.close()
+    con.commit()
+    tripped = []
+    for k in keys:
+        pre = next((p for p in THRESHOLDS if k.startswith(p)), None)
+        if pre is None: continue
+        n = con.execute("SELECT COUNT(*) FROM login_attempts WHERE key=? AND ts>?", (k, now() - FAIL_WINDOW_S)).fetchone()[0]
+        if n == THRESHOLDS[pre]: tripped.append((k, pre, n))
+    con.close()
+    for k, pre, n in tripped:
+        who = k[len(pre):]
+        alert(f"lockout:{k}",
+              f"StudyBuddy lockout: {KIND[pre]} {who}",
+              f"{n} failed attempts in {FAIL_WINDOW_S // 60} minutes — {KIND[pre]} {who}.\n"
+              f"Locked out for {FAIL_WINDOW_S // 60} minutes.\n\n"
+              f"When: {datetime.now(timezone.utc):%Y-%m-%d %H:%M:%S} UTC\n"
+              f"Client IP: {client_ip()}\nPath: {request.path}\n"
+              f"User-Agent: {request.headers.get('User-Agent', '?')[:200]}\n\n"
+              f"If this was you, wait 15 minutes or sign in with a passkey. "
+              f"To re-invite yourself from the server: python manage.py invite <name> --admin")
+
+# --- email alerts -----------------------------------------------------------------
+ALERT_THROTTLE_S = 3600     # at most one email per subject key per hour
+
+def alert(key, subject, body):
+    """Send an alert email to ALERT_EMAIL (throttled per key). Never raises."""
+    try:
+        last = float(get_setting("alert:" + key, 0) or 0)
+        if now() - last < ALERT_THROTTLE_S: return False
+        set_setting("alert:" + key, now())
+        return send_email(subject, body)
+    except Exception as e:
+        print("alert failed:", e, file=sys.stderr); return False
+
+def send_email(subject, body, block=False):
+    to = os.environ.get("ALERT_EMAIL"); host = os.environ.get("SMTP_HOST")
+    user = os.environ.get("SMTP_USER"); pw = os.environ.get("SMTP_PASS")
+    port = int(os.environ.get("SMTP_PORT", "587"))
+    if not (to and host and user and pw):
+        print("email not configured (ALERT_EMAIL/SMTP_*); would have sent:", subject, file=sys.stderr); return False
+    msg = EmailMessage(); msg["From"] = user; msg["To"] = to; msg["Subject"] = subject; msg.set_content(body)
+    def go():
+        try:
+            with smtplib.SMTP(host, port, timeout=20) as s:
+                s.ehlo(); s.starttls(); s.login(user, pw); s.send_message(msg)
+        except Exception as e:
+            print("email send failed:", e, file=sys.stderr)
+            if block: raise
+    if block: go()
+    else: threading.Thread(target=go, daemon=True).start()
+    return True
 
 def clear_fails(*keys):
     con = db()
@@ -189,6 +255,68 @@ def lookup_invite(token):
                        WHERE i.token_hash=? AND i.used=0 AND i.expires>?""",
                     (hashlib.sha256(token.encode()).hexdigest(), now())).fetchone()
     con.close(); return r
+
+# --- self-service sign-up with a shared invite code ----------------------------------
+CODE_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"   # no 0/O, 1/I/L look-alikes
+
+def new_code():
+    while True:
+        c = "".join(secrets.choice(CODE_ALPHABET) for _ in range(8))
+        if all(c[i] != c[i + 1] for i in range(7)): return c[:4] + "-" + c[4:]
+
+def norm_code(s):
+    return "".join(ch for ch in str(s).upper() if ch.isalnum())
+
+def code_status():
+    """-> (code, expires_iso, state) where state is 'off' | 'expired' | 'active'."""
+    code = get_setting("invite_code"); exp = get_setting("invite_code_expires")
+    if not code: return None, exp, "off"
+    if exp and date.today().isoformat() >= exp: return code, exp, "expired"
+    return code, exp, "active"
+
+def name_taken(name):
+    con = db()
+    a = con.execute("SELECT 1 FROM accounts WHERE username=?", (name,)).fetchone()
+    u = con.execute("SELECT 1 FROM users WHERE name=? COLLATE NOCASE", (name,)).fetchone()
+    con.close(); return bool(a or u)
+
+@bp.get("/api/signup/status")
+def signup_status():
+    _, exp, state = code_status()
+    return jsonify({"open": state == "active", "state": state})
+
+@bp.post("/auth/signup")
+def signup():
+    d = json_body(); given = norm_code(d.get("code") or ""); name = (d.get("username") or "").strip()
+    ip = client_ip(); k = "code:" + ip
+    if fails(k) >= MAX_FAILS_USER: return jsonify({"error": "Too many attempts. Wait 15 minutes."}), 429
+    code, exp, state = code_status()
+    if state == "off": return jsonify({"error": "Self sign-up is off. Ask an admin for an invite link."}), 403
+    if state == "expired": return jsonify({"error": "That code has expired — ask a club member for the current one."}), 403
+    if not given or not hmac.compare_digest(given, norm_code(code)):
+        record_fail(k); return jsonify({"error": "Wrong code."}), 401
+    if not name or len(name) > 40: return jsonify({"error": "Pick a name, 1–40 characters."}), 400
+    if name_taken(name): return jsonify({"error": "That name is taken — pick another."}), 409
+    token = create_invite(name)
+    return jsonify({"ok": True, "url": f"/enroll/{token}"})
+
+@bp.post("/admin/code")
+@admin_required
+def admin_code():
+    d = json_body(); action = d.get("action")
+    if action == "off":
+        set_setting("invite_code", None); set_setting("invite_code_expires", None)
+    else:
+        code = norm_code(d.get("code") or "") if action == "set" else norm_code(new_code())
+        if len(code) < 8: return jsonify({"error": "Code must be at least 8 letters/digits."}), 400
+        exp = (d.get("expires") or "").strip()
+        if exp:
+            try: date.fromisoformat(exp)
+            except ValueError: return jsonify({"error": "Expiry must be YYYY-MM-DD."}), 400
+        set_setting("invite_code", code[:4] + "-" + code[4:] if len(code) == 8 else code)
+        set_setting("invite_code_expires", exp or None)
+    code, exp, state = code_status()
+    return jsonify({"ok": True, "code": code, "expires": exp, "state": state})
 
 # --- TOTP ---------------------------------------------------------------------
 def totp_ok(acc, code):
@@ -357,7 +485,10 @@ def admin_page():
     rows = con.execute("""SELECT a.*, (SELECT COUNT(*) FROM passkeys p WHERE p.account_id=a.id) AS npk
                           FROM accounts a ORDER BY username COLLATE NOCASE""").fetchall()
     con.close()
-    body = render_template_string(ADMIN_BODY, accounts=rows, me=g.account, fmt=fmt_ts)
+    code, exp, state = code_status()
+    body = render_template_string(ADMIN_BODY, accounts=rows, me=g.account, fmt=fmt_ts,
+                                  code=code, code_exp=exp, code_state=state,
+                                  email_on=bool(os.environ.get("ALERT_EMAIL") and os.environ.get("SMTP_PASS")))
     return render_template_string(BASE, title="Admin", body=body)
 
 @bp.post("/admin/invite")
@@ -463,11 +594,24 @@ LOGIN_BODY = r"""
   <input id="c" placeholder="6-digit code" inputmode="numeric" autocomplete="one-time-code" onkeydown="if(event.key==='Enter')totpLogin()">
   <button class="btn alt" onclick="totpLogin()">Sign in</button>
 </div>
+<div class="card" id="signup" style="display:none">
+  <h2>New here? Have an invite code?</h2>
+  <p>It's on the card or from a club member. Pick the name you'll study under.</p>
+  <input id="ic" placeholder="invite code, e.g. AB2C-DEF3" autocapitalize="characters" autocomplete="off" style="text-transform:uppercase">
+  <input id="in" placeholder="your name" autocomplete="off" maxlength="40" onkeydown="if(event.key==='Enter')signup()">
+  <button class="btn alt" onclick="signup()">Create my login</button>
+  <div class="msg" id="msg2"></div>
+</div>
 <script>
 if(!hasPasskeys()){document.getElementById('pkBtn').disabled=true;say('msg','This browser has no passkey support — use a code.',false);}
+fetch('/api/signup/status').then(r=>r.json()).then(j=>{if(j.open)document.getElementById('signup').style.display='';}).catch(()=>{});
 async function totpLogin(){
   const j=await post('/auth/totp/login',{username:document.getElementById('u').value,code:document.getElementById('c').value});
   if(j.ok) location.href='/'; else say('msg',j.error||'Sign-in failed.',false);
+}
+async function signup(){
+  const j=await post('/auth/signup',{code:document.getElementById('ic').value,username:document.getElementById('in').value});
+  if(j.ok) location.href=j.url; else say('msg2',j.error||'Sign-up failed.',false);
 }
 </script>"""
 
@@ -529,7 +673,21 @@ async function del(id){ if(confirm('Remove this passkey?')){await post('/auth/pa
 
 ADMIN_BODY = r"""
 <div class="card">
-  <h2>Invite someone</h2>
+  <h2>Self-service invite code</h2>
+  <p>Anyone with this code can create their own login from the sign-in page (rate-limited: 5 guesses per 15 min per IP). Print it on the card; rotate it when you reprint.</p>
+  {% if code_state == 'off' %}<p><b>Off</b> — sign-up is invite-link only.</p>
+  {% else %}<p>Current code: <code style="font-size:16px">{{ code }}</code>
+    {% if code_exp %}· valid through {{ code_exp }}{% endif %}
+    {% if code_state == 'expired' %} <span class="pill" style="color:var(--again)">EXPIRED</span>{% else %} <span class="pill">active</span>{% endif %}</p>{% endif %}
+  <input id="cc" placeholder="set a specific code (blank = generate one)" autocapitalize="characters" style="text-transform:uppercase" maxlength="12">
+  <input id="ce" placeholder="expires (YYYY-MM-DD, blank = never)" value="{{ code_exp or '' }}">
+  <button class="btn" onclick="setCode()">Save / rotate code</button>
+  {% if code_state != 'off' %}<button class="btn warn" onclick="codeOff()">Turn self sign-up off</button>{% endif %}
+  <div class="msg" id="msgc"></div>
+  <p style="margin-top:14px">Lockout email alerts: <b>{{ 'on' if email_on else 'not configured' }}</b>{% if not email_on %} — set ALERT_EMAIL and SMTP_* in .env{% endif %}.</p>
+</div>
+<div class="card">
+  <h2>Invite someone directly</h2>
   <p>Creates an account and a one-time link (valid 72 h). Send the link to them however you like. Re-inviting an existing name resets their login (new authenticator secret, passkeys removed) but keeps their study progress.</p>
   <input id="u" placeholder="name" autocapitalize="off" maxlength="40">
   <label class="chk"><input type="checkbox" id="adm"> make admin</label>
@@ -555,4 +713,10 @@ async function invite(){
   else say('msg',j.error||'Failed.',false);
 }
 async function del(id,name){ if(confirm('Delete the login for '+name+'? Their study progress is kept.')){await post('/admin/delete',{id});location.reload();} }
+async function setCode(){
+  const c=document.getElementById('cc').value.trim();
+  const j=await post('/admin/code',{action:c?'set':'generate',code:c,expires:document.getElementById('ce').value});
+  if(j.ok){say('msgc','Code is now '+j.code,true);setTimeout(()=>location.reload(),900);} else say('msgc',j.error||'Failed.',false);
+}
+async function codeOff(){ if(confirm('Turn off self sign-up? Existing logins are unaffected.')){await post('/admin/code',{action:'off'});location.reload();} }
 </script>"""

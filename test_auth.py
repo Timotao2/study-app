@@ -93,6 +93,62 @@ check(r.status_code == 200 and j["rp"]["id"] == "localhost" and j["authenticator
 r = c.post("/auth/passkey/login/options"); j = r.get_json(); check(r.status_code == 200 and j.get("allowCredentials", []) == [] and "challenge" in j, "login options: discoverable")
 r = c.post("/auth/passkey/login/verify", json={"id": "nope", "response": {}}); check(r.status_code == 401, "unknown credential rejected")
 
+
+print("invite-code sign-up")
+c3 = app.test_client()
+check(c3.get("/api/signup/status").get_json()["open"] is False, "sign-up closed by default")
+check(c3.post("/auth/signup", json={"code": "X", "username": "Bob"}).status_code == 403, "signup refused while off")
+r = c.post("/admin/code", json={"action": "set", "code": "x7c4-dvwm", "expires": "2027-01-01"}); j = r.get_json()
+check(r.status_code == 200 and j["code"] == "X7C4-DVWM" and j["state"] == "active", f"admin sets code -> {j['code']} active until {j['expires']}")
+check(c2.post("/admin/code", json={"action": "off"}).status_code == 403, "non-admin cannot change code")
+check(c3.get("/api/signup/status").get_json()["open"] is True, "sign-up open")
+check(c3.post("/auth/signup", json={"code": "X7C4-DVWN", "username": "Bob"}).status_code == 401, "wrong code rejected")
+check(c3.post("/auth/signup", json={"code": "x7c4 dvwm", "username": "Tim"}).status_code == 409, "existing name refused (case/spacing normalised code accepted)")
+r = c3.post("/auth/signup", json={"code": "X7C4-DVWM", "username": "Bob"}); j = r.get_json()
+check(r.status_code == 200 and j["url"].startswith("/enroll/"), "correct code -> enrol link")
+r = c3.post("/auth/enroll/" + j["url"].split("/")[-1] + "/totp", json={"code": code_for("Bob")})
+check(r.status_code == 200 and c3.get("/api/me").get_json()["name"] == "Bob", "Bob enrols and is logged in")
+check(c3.get("/api/stats?deck=sr20").get_json()["seen"] == 0, "Bob starts fresh, not linked to anyone's progress")
+check(c3.post("/auth/signup", json={"code": "X7C4-DVWM", "username": "bob"}).status_code == 409, "duplicate name (case-insensitive) refused")
+c.post("/admin/code", json={"action": "set", "code": "X7C4-DVWM", "expires": "2020-01-01"})
+check(c3.post("/auth/signup", json={"code": "X7C4-DVWM", "username": "Carol"}).status_code == 403, "expired code refused")
+check(c3.get("/api/signup/status").get_json()["open"] is False, "status reports closed when expired")
+r = c.post("/admin/code", json={"action": "generate", "expires": ""}); j = r.get_json()
+check(r.status_code == 200 and len(j["code"]) == 9 and all(ch not in "0O1IL" for ch in j["code"].replace("-", "")), f"generated code {j['code']} has no look-alikes")
+c.post("/admin/code", json={"action": "off"}); check(c3.get("/api/signup/status").get_json()["state"] == "off", "code turned off")
+c.post("/admin/code", json={"action": "set", "code": "X7C4-DVWM", "expires": "2027-01-01"})
+for i in range(5): c3.post("/auth/signup", json={"code": "WRONG-WRONG", "username": "Dan"})
+check(c3.post("/auth/signup", json={"code": "X7C4-DVWM", "username": "Dan"}).status_code == 429, "5 wrong codes -> locked out")
+auth.clear_fails("code:127.0.0.1", "code:?")
+
+print("lockout email alert (real SMTP round-trip to a local test server)")
+from aiosmtpd.controller import Controller
+class Sink:
+    inbox = []
+    async def handle_DATA(self, server, session, envelope):
+        Sink.inbox.append(envelope.content.decode()); return "250 OK"
+import smtplib as smtplib_mod
+class PlainSMTP(smtplib_mod.SMTP):  # skip STARTTLS/login against the plaintext test server
+    def starttls(self, *a, **k): return (220, b"ok")
+    def login(self, *a, **k): return (235, b"ok")
+auth.smtplib.SMTP = PlainSMTP
+ctrl = Controller(Sink(), hostname="127.0.0.1", port=8025); ctrl.start()
+os.environ.update(ALERT_EMAIL="timotao2@gmail.com", SMTP_HOST="127.0.0.1", SMTP_PORT="8025", SMTP_USER="timotao2@gmail.com", SMTP_PASS="x")
+auth.clear_fails("u:tim", "ip:127.0.0.1", "ip:?")
+con = auth.db(); con.execute("DELETE FROM settings WHERE k LIKE 'alert:%'"); con.commit(); con.close()   # reset alert throttle
+c4 = app.test_client()
+for i in range(5): c4.post("/auth/totp/login", json={"username": "Tim", "code": "000000"})
+time.sleep(1.0)
+check(len(Sink.inbox) == 1 and "lockout" in Sink.inbox[0] and "account tim" in Sink.inbox[0] and "To: timotao2@gmail.com" in Sink.inbox[0], f"one email on the 5th failure for account Tim (got {len(Sink.inbox)})")
+for i in range(3): c4.post("/auth/totp/login", json={"username": "Tim", "code": "000000"})
+time.sleep(0.5); check(len(Sink.inbox) == 1, "further failures in the window do not re-send (throttled)")
+# IP threshold: 5 recorded so far on this IP (locked-out attempts are not counted); 10 more from distinct names -> 15
+for i in range(10): c4.post("/auth/totp/login", json={"username": f"ghost{i}", "code": "000000"})
+time.sleep(1.5)
+check(len(Sink.inbox) == 2 and "from IP" in Sink.inbox[1], f"second email when the IP threshold (15) trips (got {len(Sink.inbox)}: {[m.splitlines()[2] for m in Sink.inbox]})")
+ctrl.stop()
+auth.clear_fails("u:tim", "ip:127.0.0.1", "ip:?")
+
 print("security headers")
 h = c.get("/login").headers; check(h.get("X-Frame-Options") == "DENY" and h.get("X-Content-Type-Options") == "nosniff", "headers present")
 

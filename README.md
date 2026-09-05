@@ -18,13 +18,19 @@ into a subject-agnostic study app where each deck is a module.
 
 ## Accounts and login
 
-Invite-only. There is no sign-up page.
+Two ways in, both controlled by an admin:
+
+- **Shared invite code** (the one printed on the business cards). Anyone with
+  the current code creates their own login from the sign-in page. Set, rotate,
+  expire, or switch it off on `/admin` (or `python manage.py code …`). Code
+  guesses are rate-limited to 5 per 15 min per IP. When the expiry date
+  passes, the code stops working and the sign-up box disappears.
+- **Direct invite link** for one person: `/admin` → "Invite someone directly",
+  or `python manage.py invite <name> [--admin]`. Single-use, 72 h.
 
 - Sign in with a **passkey** (Windows Hello, Face ID, fingerprint) or an
   **authenticator-app code** (TOTP). Every account has TOTP; passkeys are
   added per device from `/settings`.
-- Admins create invite links on `/admin` (or `python manage.py invite <name>
-  [--admin]` on the server). Links are single-use and expire after 72 h.
 - Re-inviting an existing name resets their login (new TOTP secret, passkeys
   removed) but keeps their study progress. Lost admin access: run the
   `manage.py invite` command in a PythonAnywhere console.
@@ -62,7 +68,16 @@ Then **Reload** on the Web tab. If `requirements.txt` changed, also run
 SECRET_KEY=<python manage.py secret>
 RP_ID=studybuddy.foo
 ORIGIN=https://studybuddy.foo
+ALERT_EMAIL=…      # lockout alerts go here (optional)
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=…        # the Gmail address that sends
+SMTP_PASS=…        # a Gmail App Password, not the account password
 ```
+
+Lockout alerts: one email when an account hits 5 failed code logins, an IP
+hits 15, or an IP burns 5 invite-code guesses — throttled to one per key per
+hour. `python manage.py testmail` sends a test message.
 
 ## Running locally
 
