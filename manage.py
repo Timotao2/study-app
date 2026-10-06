@@ -10,15 +10,57 @@ manage.py — admin tasks from the command line (run in the app folder).
     python manage.py code new [YYYY-MM-DD]           generate a new code
     python manage.py code off                        turn self sign-up off
     python manage.py testmail                        send a test alert email using .env SMTP settings
+    python manage.py module list                     show published modules
+    python manage.py module check <file.json>        validate a module file, print the report
+    python manage.py module publish <file.json>      validate and publish (replaces the same id)
+    python manage.py module hide|show|delete <id>    same as the buttons on /admin (delete wipes progress)
+    python manage.py module export <id> [file.json]  write a published module back out as JSON
 """
-import sys, secrets
-import app as trainer          # importing app.py initialises the DB (incl. auth tables)
-import auth
+import sys, secrets, json
+import app as trainer          # importing app.py initialises the DB (incl. auth + modules tables)
+import auth, modules
+
+def module_cmd(argv):
+    sub = argv[0] if argv else "list"
+    if sub == "list":
+        for m in modules.all_modules().values():
+            types = ", ".join(f"{n} {t}" for t, n in sorted(m["types"].items()))
+            print(f'{m["id"]:24} {m["name"][:34]:34} v{m["version"][:12]:12} {m["count"]:4} cards ({types}){"  HIDDEN" if m["hidden"] else ""}')
+        return 0
+    if sub in ("check", "publish"):
+        if len(argv) < 2: print(f"usage: python manage.py module {sub} <file.json>"); return 1
+        with open(argv[1], encoding="utf-8") as f: obj = json.load(f)
+        rep = modules.validate_module(obj)
+        import html
+        for e in rep["errors"]: print(f'  ERROR   {html.unescape(e["card"])}: {html.unescape(e["msg"])}')
+        for w in rep["warnings"]: print(f'  warning {html.unescape(w["card"])}: {html.unescape(w["msg"])}')
+        if not rep["ok"]: print(f'{len(rep["errors"])} error(s) — nothing published'); return 1
+        s = rep["summary"]; print(f'valid: {html.unescape(s["name"])} ({s["id"]}) — {s["count"]} cards ({s["types_text"]})')
+        if rep["replace"]:
+            r = rep["replace"]; print(f'  replaces v{html.unescape(r["version"])}: {r["kept"]} kept, {r["added"]} new, {r["removed"]} removed; {r["users"]} user(s) have progress')
+        if sub == "publish":
+            modules.publish_module(obj, uploaded_by="manage.py"); print("published")
+        return 0
+    if sub in ("hide", "show", "delete", "export"):
+        if len(argv) < 2: print(f"usage: python manage.py module {sub} <id>"); return 1
+        mid = argv[1]
+        if sub == "export":
+            data = modules.module_json(mid)
+            if data is None: print("no such module"); return 1
+            out = argv[2] if len(argv) > 2 else f"{mid}.studybuddy.json"
+            with open(out, "w", encoding="utf-8") as f: f.write(json.dumps(json.loads(data), indent=1, ensure_ascii=False) + "\n")
+            print("wrote", out); return 0
+        ok = modules.delete_module(mid) if sub == "delete" else modules.set_hidden(mid, sub == "hide")
+        print({"hide": "hidden", "show": "shown", "delete": "deleted (progress wiped)"}[sub] + ": " + mid if ok else "no such module")
+        return 0 if ok else 1
+    print(__doc__); return 1
 
 def main(argv):
-    if not argv or argv[0] not in ("invite", "list", "secret", "code", "testmail"):
+    if not argv or argv[0] not in ("invite", "list", "secret", "code", "testmail", "module"):
         print(__doc__); return 1
     cmd = argv[0]
+    if cmd == "module":
+        return module_cmd(argv[1:])
     if cmd == "secret":
         print(secrets.token_hex(32)); return 0
     if cmd == "list":

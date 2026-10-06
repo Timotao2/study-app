@@ -1,0 +1,680 @@
+{
+ "format": "studybuddy-module/1",
+ "id": "sr20",
+ "name": "Cirrus SR20 Reference",
+ "version": "2026-09-24",
+ "source": "Cirrus SR20 POH / Sunshine Aero club reference numbers (converted from the original app.py DECK)",
+ "cards": [
+  {
+   "id": "v-speeds-01",
+   "type": "cloze",
+   "cat": "V-speeds",
+   "tmpl": "Vr, normal rotation at 50% flaps, is [[0]].",
+   "blanks": {
+    "0": {
+     "a": "67 KIAS",
+     "kind": "num"
+    }
+   }
+  },
+  {
+   "id": "v-speeds-02",
+   "type": "cloze",
+   "cat": "V-speeds",
+   "tmpl": "Vx (best angle of climb) is [[0]] at sea level and [[1]] at 10K.",
+   "blanks": {
+    "0": {
+     "a": "81 KIAS",
+     "kind": "num"
+    },
+    "1": {
+     "a": "85 KIAS",
+     "kind": "num"
+    }
+   }
+  },
+  {
+   "id": "v-speeds-03",
+   "type": "cloze",
+   "cat": "V-speeds",
+   "tmpl": "Vy (best rate of climb) is [[0]] at sea level and [[1]] at 10K.",
+   "blanks": {
+    "0": {
+     "a": "96 KIAS",
+     "kind": "num"
+    },
+    "1": {
+     "a": "91 KIAS",
+     "kind": "num"
+    }
+   }
+  },
+  {
+   "id": "v-speeds-04",
+   "type": "cloze",
+   "cat": "V-speeds",
+   "tmpl": "Best glide is [[0]] at 3000 lb and [[1]] at 2500 lb.",
+   "blanks": {
+    "0": {
+     "a": "96 KIAS",
+     "kind": "num"
+    },
+    "1": {
+     "a": "87 KIAS",
+     "kind": "num"
+    }
+   }
+  },
+  {
+   "id": "v-speeds-05",
+   "type": "cloze",
+   "cat": "V-speeds",
+   "tmpl": "Vpd, the max CAPS deployment speed, is [[0]].",
+   "blanks": {
+    "0": {
+     "a": "135 KIAS",
+     "kind": "num"
+    }
+   }
+  },
+  {
+   "id": "v-speeds-06",
+   "type": "cloze",
+   "cat": "V-speeds",
+   "tmpl": "Va (design maneuvering) is [[0]] at 3000 lb, [[1]] at 2600 lb, and [[2]] at 2200 lb.",
+   "blanks": {
+    "0": {
+     "a": "131 KIAS",
+     "kind": "num"
+    },
+    "1": {
+     "a": "122 KIAS",
+     "kind": "num"
+    },
+    "2": {
+     "a": "111 KIAS",
+     "kind": "num"
+    }
+   }
+  },
+  {
+   "id": "v-speeds-07",
+   "type": "cloze",
+   "cat": "V-speeds",
+   "tmpl": "Vfe is [[0]] with flaps 50% and [[1]] with flaps 100%.",
+   "blanks": {
+    "0": {
+     "a": "120 KIAS",
+     "kind": "num"
+    },
+    "1": {
+     "a": "100 KIAS",
+     "kind": "num"
+    }
+   }
+  },
+  {
+   "id": "v-speeds-08",
+   "type": "cloze",
+   "cat": "V-speeds",
+   "tmpl": "Vno (max structural cruise) is [[0]] and Vne (never exceed) is [[1]].",
+   "blanks": {
+    "0": {
+     "a": "165 KIAS",
+     "kind": "num"
+    },
+    "1": {
+     "a": "200 KIAS",
+     "kind": "num"
+    }
+   }
+  },
+  {
+   "id": "v-speeds-09",
+   "type": "cloze",
+   "cat": "V-speeds",
+   "tmpl": "Stall speed is [[0]] clean (Vs) and [[1]] with flaps 100% (Vso).",
+   "blanks": {
+    "0": {
+     "a": "65 KIAS",
+     "kind": "num"
+    },
+    "1": {
+     "a": "56 KIAS",
+     "kind": "num"
+    }
+   }
+  },
+  {
+   "id": "limits-01",
+   "type": "cloze",
+   "cat": "Limits",
+   "tmpl": "The engine makes [[0]] at [[1]].",
+   "blanks": {
+    "0": {
+     "a": "200 HP",
+     "kind": "num"
+    },
+    "1": {
+     "a": "2700 RPM",
+     "kind": "num"
+    }
+   }
+  },
+  {
+   "id": "limits-02",
+   "type": "cloze",
+   "cat": "Limits",
+   "tmpl": "Load factor limits are [[0]] positive and [[1]] negative.",
+   "blanks": {
+    "0": {
+     "a": "+3.8 G",
+     "kind": "num"
+    },
+    "1": {
+     "a": "-1.9 G",
+     "kind": "num"
+    }
+   }
+  },
+  {
+   "id": "limits-03",
+   "type": "cloze",
+   "cat": "Limits",
+   "tmpl": "Maximum glide ratio is [[0]].",
+   "blanks": {
+    "0": {
+     "a": "10.9:1",
+     "kind": "num",
+     "alts": [
+      "10.9 to 1",
+      "10.9"
+     ]
+    }
+   }
+  },
+  {
+   "id": "limits-04",
+   "type": "cloze",
+   "cat": "Limits",
+   "tmpl": "Mag check limits: [[0]] max drop and [[1]] max differential.",
+   "blanks": {
+    "0": {
+     "a": "150 RPM",
+     "kind": "num"
+    },
+    "1": {
+     "a": "75 RPM",
+     "kind": "num"
+    }
+   }
+  },
+  {
+   "id": "limits-05",
+   "type": "cloze",
+   "cat": "Limits",
+   "tmpl": "Usable fuel is [[0]]; oil is [[1]] min and [[2]] max.",
+   "blanks": {
+    "0": {
+     "a": "56 gal",
+     "kind": "num"
+    },
+    "1": {
+     "a": "6 qt",
+     "kind": "num"
+    },
+    "2": {
+     "a": "8 qt",
+     "kind": "num"
+    }
+   }
+  },
+  {
+   "id": "limits-06",
+   "type": "cloze",
+   "cat": "Limits",
+   "tmpl": "Max takeoff weight is [[0]] and max landing weight is [[1]].",
+   "blanks": {
+    "0": {
+     "a": "3000 lb",
+     "kind": "num"
+    },
+    "1": {
+     "a": "2900 lb",
+     "kind": "num"
+    }
+   }
+  },
+  {
+   "id": "limits-07",
+   "type": "cloze",
+   "cat": "Limits",
+   "tmpl": "Max useful load is [[0]], max full-fuel payload [[1]], max cargo area [[2]].",
+   "blanks": {
+    "0": {
+     "a": "950 lb",
+     "kind": "num"
+    },
+    "1": {
+     "a": "622 lb",
+     "kind": "num"
+    },
+    "2": {
+     "a": "130 lb",
+     "kind": "num"
+    }
+   }
+  },
+  {
+   "id": "limits-08",
+   "type": "cloze",
+   "cat": "Limits",
+   "tmpl": "Max operating altitude is [[0]]; min autopilot engagement is [[1]].",
+   "blanks": {
+    "0": {
+     "a": "17500 ft MSL",
+     "kind": "num",
+     "alts": [
+      "17,500 ft msl",
+      "17500 msl",
+      "17500"
+     ]
+    },
+    "1": {
+     "a": "400 ft AGL",
+     "kind": "num",
+     "alts": [
+      "400 agl",
+      "400"
+     ]
+    }
+   }
+  },
+  {
+   "id": "limits-09",
+   "type": "cloze",
+   "cat": "Limits",
+   "tmpl": "Max demonstrated crosswind component is [[0]].",
+   "blanks": {
+    "0": {
+     "a": "21 knots",
+     "kind": "num",
+     "alts": [
+      "21 kt",
+      "21"
+     ]
+    }
+   }
+  },
+  {
+   "id": "takeoff-01",
+   "type": "cloze",
+   "cat": "Takeoff",
+   "tmpl": "Normal takeoff: flaps [[0]], rotate at [[1]], flaps up at [[2]], climb at [[3]].",
+   "blanks": {
+    "0": {
+     "a": "50%",
+     "kind": "num"
+    },
+    "1": {
+     "a": "67 KIAS",
+     "kind": "num"
+    },
+    "2": {
+     "a": "85 KIAS",
+     "kind": "num"
+    },
+    "3": {
+     "a": "96 KIAS",
+     "kind": "num"
+    }
+   }
+  },
+  {
+   "id": "takeoff-02",
+   "type": "cloze",
+   "cat": "Takeoff",
+   "tmpl": "Short field: rotate at [[0]], pull to [[1]] attitude, climb [[2]] until obstacle cleared.",
+   "blanks": {
+    "0": {
+     "a": "65 KIAS",
+     "kind": "num"
+    },
+    "1": {
+     "a": "Vx",
+     "kind": "word",
+     "alts": [
+      "vx"
+     ]
+    },
+    "2": {
+     "a": "81 KIAS",
+     "kind": "num"
+    }
+   }
+  },
+  {
+   "id": "takeoff-03",
+   "type": "cloze",
+   "cat": "Takeoff",
+   "tmpl": "Soft field: full [[0]] yoke, at liftoff stay in ground effect to [[1]] before Vy attitude.",
+   "blanks": {
+    "0": {
+     "a": "aft",
+     "kind": "word",
+     "alts": [
+      "back",
+      "rear"
+     ]
+    },
+    "1": {
+     "a": "81 KIAS",
+     "kind": "num"
+    }
+   }
+  },
+  {
+   "id": "cruise-01",
+   "type": "cloze",
+   "cat": "Cruise",
+   "tmpl": "Cruise power is [[0]]; enroute climb is [[1]] knots above Vy for cooling.",
+   "blanks": {
+    "0": {
+     "a": "70-75%",
+     "kind": "num",
+     "alts": [
+      "70 to 75%",
+      "70-75"
+     ]
+    },
+    "1": {
+     "a": "5 to 10",
+     "kind": "num",
+     "alts": [
+      "5-10",
+      "5 10"
+     ]
+    }
+   }
+  },
+  {
+   "id": "landing-01",
+   "type": "cloze",
+   "cat": "Landing",
+   "tmpl": "Normal landing: abeam touchdown [[0]] and [[1]]; base flaps 50% at [[2]]; final flaps 100% at [[3]].",
+   "blanks": {
+    "0": {
+     "a": "1500 RPM",
+     "kind": "num"
+    },
+    "1": {
+     "a": "100 KIAS",
+     "kind": "num"
+    },
+    "2": {
+     "a": "90 KIAS",
+     "kind": "num"
+    },
+    "3": {
+     "a": "75 KIAS",
+     "kind": "num"
+    }
+   }
+  },
+  {
+   "id": "landing-02",
+   "type": "cloze",
+   "cat": "Landing",
+   "tmpl": "Balked landing: full power, flaps [[0]], climb [[1]] until obstacles cleared.",
+   "blanks": {
+    "0": {
+     "a": "50%",
+     "kind": "num"
+    },
+    "1": {
+     "a": "81 KIAS",
+     "kind": "num"
+    }
+   }
+  },
+  {
+   "id": "landing-03",
+   "type": "cloze",
+   "cat": "Landing",
+   "tmpl": "Short field landing: fly final at [[0]], land within [[1]] of the spot.",
+   "blanks": {
+    "0": {
+     "a": "75 KIAS",
+     "kind": "num"
+    },
+    "1": {
+     "a": "0-200 ft",
+     "kind": "num",
+     "alts": [
+      "0 to 200 ft",
+      "0-200"
+     ]
+    }
+   }
+  },
+  {
+   "id": "landing-04",
+   "type": "cloze",
+   "cat": "Landing",
+   "tmpl": "Soft field landing: leave power at [[0]] through touchdown, touch down at [[1]] attitude.",
+   "blanks": {
+    "0": {
+     "a": "1100-1200 RPM",
+     "kind": "num",
+     "alts": [
+      "1100 to 1200 rpm",
+      "1100-1200"
+     ]
+    },
+    "1": {
+     "a": "Vy",
+     "kind": "word",
+     "alts": [
+      "vy"
+     ]
+    }
+   }
+  },
+  {
+   "id": "maneuvers-01",
+   "type": "cloze",
+   "cat": "Maneuvers",
+   "tmpl": "Steep turns: slow to [[0]], roll into [[1]] of bank, lead rollout by [[2]].",
+   "blanks": {
+    "0": {
+     "a": "Va",
+     "kind": "word",
+     "alts": [
+      "va"
+     ]
+    },
+    "1": {
+     "a": "45/50 degrees",
+     "kind": "num",
+     "alts": [
+      "45-50 degrees",
+      "45/50",
+      "45 50"
+     ]
+    },
+    "2": {
+     "a": "20 degrees",
+     "kind": "num",
+     "alts": [
+      "20"
+     ]
+    }
+   }
+  },
+  {
+   "id": "maneuvers-02",
+   "type": "cloze",
+   "cat": "Maneuvers",
+   "tmpl": "Slow flight & stalls set up at power [[0]]; power-on stall uses full power at [[1]].",
+   "blanks": {
+    "0": {
+     "a": "1500 RPM",
+     "kind": "num"
+    },
+    "1": {
+     "a": "75 KIAS",
+     "kind": "num"
+    }
+   }
+  },
+  {
+   "id": "maneuvers-03",
+   "type": "cloze",
+   "cat": "Maneuvers",
+   "tmpl": "Chandelle: roll into [[0]] of bank, full power; at 90 degrees about [[1]] nose high and [[2]].",
+   "blanks": {
+    "0": {
+     "a": "30 degrees",
+     "kind": "num",
+     "alts": [
+      "30"
+     ]
+    },
+    "1": {
+     "a": "18 degrees",
+     "kind": "num",
+     "alts": [
+      "18"
+     ]
+    },
+    "2": {
+     "a": "75 KIAS",
+     "kind": "num"
+    }
+   }
+  },
+  {
+   "id": "instrument-01",
+   "type": "cloze",
+   "cat": "Instrument",
+   "tmpl": "Holding airspeed is [[0]]; cross the FAF at [[1]] with final approach at [[2]].",
+   "blanks": {
+    "0": {
+     "a": "110 KIAS",
+     "kind": "num"
+    },
+    "1": {
+     "a": "100 KIAS",
+     "kind": "num"
+    },
+    "2": {
+     "a": "100 KIAS",
+     "kind": "num"
+    }
+   }
+  },
+  {
+   "id": "emergency-01",
+   "type": "cloze",
+   "cat": "Emergency",
+   "tmpl": "Emergency landing: glide at Vglide, and if no prepared surface pull CAPS no lower than [[0]].",
+   "blanks": {
+    "0": {
+     "a": "2000 ft AGL",
+     "kind": "num",
+     "alts": [
+      "2000 agl",
+      "2,000 ft agl",
+      "2000"
+     ]
+    }
+   }
+  },
+  {
+   "id": "cautions-01",
+   "type": "cloze",
+   "cat": "Cautions",
+   "tmpl": "Leave [[0]] off during engine start to avoid high electrical loads.",
+   "blanks": {
+    "0": {
+     "a": "alternators",
+     "kind": "word",
+     "alts": [
+      "alternator"
+     ]
+    }
+   }
+  },
+  {
+   "id": "cautions-02",
+   "type": "cloze",
+   "cat": "Cautions",
+   "tmpl": "Weight and balance is critical because the design is [[0]].",
+   "blanks": {
+    "0": {
+     "a": "nose-heavy",
+     "kind": "word",
+     "alts": [
+      "nose heavy",
+      "noseheavy"
+     ]
+    }
+   }
+  },
+  {
+   "id": "cautions-03",
+   "type": "cloze",
+   "cat": "Cautions",
+   "tmpl": "[[0]] and spins are prohibited, and so is flight into known [[1]].",
+   "blanks": {
+    "0": {
+     "a": "aerobatics",
+     "kind": "word",
+     "alts": [
+      "acro",
+      "aerobatic"
+     ]
+    },
+    "1": {
+     "a": "icing",
+     "kind": "word",
+     "alts": [
+      "ice"
+     ]
+    }
+   }
+  },
+  {
+   "id": "cautions-04",
+   "type": "cloze",
+   "cat": "Cautions",
+   "tmpl": "Call '[[0]]' passing 500 ft AGL after takeoff and 'Negative CAPS' on approach.",
+   "blanks": {
+    "0": {
+     "a": "CAPS available",
+     "kind": "word",
+     "alts": [
+      "caps available"
+     ]
+    }
+   }
+  },
+  {
+   "id": "cautions-05",
+   "type": "cloze",
+   "cat": "Cautions",
+   "tmpl": "Spin recovery can only be accomplished by [[0]].",
+   "blanks": {
+    "0": {
+     "a": "CAPS deployment",
+     "kind": "word",
+     "alts": [
+      "caps",
+      "caps deploy",
+      "deploying caps"
+     ]
+    }
+   }
+  }
+ ]
+}

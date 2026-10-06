@@ -6,7 +6,8 @@ shutil.copy(os.path.join(HERE, "sr20_progress.db"), SCRATCH)
 os.environ["SECRET_KEY"] = "test-secret"; os.environ["ORIGIN"] = "http://localhost"; os.environ["RP_ID"] = "localhost"
 import app as trainer
 trainer.DB = SCRATCH                      # repoint before tables are created
-trainer.init_db(); trainer.auth.init_auth_db()
+trainer.init_db(); trainer.auth.init_auth_db(); trainer.modules.init_modules_db()
+trainer.modules._cache["rev"] = None      # forget modules cached from the real DB during import
 import auth, pyotp
 
 app = trainer.app; app.testing = True
@@ -79,7 +80,7 @@ st2 = c2.get("/api/stats?deck=sr20").get_json(); check(st2["seen"] == 0 and st2[
 r = c.post("/admin/delete", json={"id": acc["id"]}); check(r.status_code == 400, "admin cannot delete self")
 
 print("re-invite resets login but keeps progress")
-c.post("/api/grade", json={"deck": "sr20", "id": 0, "grade": "good"})
+r = c.post("/api/grade", json={"deck": "sr20", "id": "v-speeds-01", "grade": "good"}); check(r.status_code == 200, "grade a card by its string id")
 tok3 = auth.create_invite("Tim")
 con = auth.db(); a = con.execute("SELECT * FROM accounts WHERE username='Tim'").fetchone()
 seen = con.execute("SELECT SUM(seen) FROM progress WHERE user_id=1").fetchone()[0]; con.close()

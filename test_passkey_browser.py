@@ -9,7 +9,7 @@ env = dict(os.environ, SECRET_KEY="pw-test", ORIGIN="http://localhost:5055", RP_
 # tiny launcher that repoints the DB then serves
 launcher = f"""
 import os, app as t, auth
-t.DB=os.environ['TEST_DB']; t.init_db(); auth.init_auth_db()
+t.DB=os.environ['TEST_DB']; t.init_db(); auth.init_auth_db(); t.modules.init_modules_db(); t.modules._cache['rev']=None
 tok=auth.create_invite('Tim', True)
 open(os.environ['TEST_DB']+'.token','w').write(tok)
 t.app.run(port=5055)

@@ -3,3 +3,5 @@ __pycache__/
 *.db
 .env
 venv/
+# module files you upload through /admin live in the database, not in git
+/*.studybuddy.json

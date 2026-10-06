@@ -42,6 +42,9 @@ FAIL_WINDOW_S = 15 * 60
 
 # db() is injected by app.py so both modules share one connection factory.
 db = None
+# Optional hook, set by app.py: a callable returning extra HTML for the top of /admin
+# (the module upload section lives in modules.py; auth.py stays free of that code).
+admin_extra = None
 
 def init_auth_db():
     con = db()
@@ -488,7 +491,8 @@ def admin_page():
     code, exp, state = code_status()
     body = render_template_string(ADMIN_BODY, accounts=rows, me=g.account, fmt=fmt_ts,
                                   code=code, code_exp=exp, code_state=state,
-                                  email_on=bool(os.environ.get("ALERT_EMAIL") and os.environ.get("SMTP_PASS")))
+                                  email_on=bool(os.environ.get("ALERT_EMAIL") and os.environ.get("SMTP_PASS")),
+                                  extra=admin_extra() if admin_extra else "")
     return render_template_string(BASE, title="Admin", body=body)
 
 @bp.post("/admin/invite")
@@ -672,6 +676,7 @@ async function del(id){ if(confirm('Remove this passkey?')){await post('/auth/pa
 </script>"""
 
 ADMIN_BODY = r"""
+{{ extra|safe }}
 <div class="card">
   <h2>Self-service invite code</h2>
   <p>Anyone with this code can create their own login from the sign-in page (rate-limited: 5 guesses per 15 min per IP). Print it on the card; rotate it when you reprint.</p>
